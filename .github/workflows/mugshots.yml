@@ -1,0 +1,54 @@
+name: Mug shot sweep (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Stories per file to check (0 = all unchecked)"
+        default: "0"
+      recheck:
+        description: "Re-examine already checked stories"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data-update
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: database
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: database/requirements.txt
+      - run: pip install -r requirements.txt
+      - name: Sweep
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PYTHONUNBUFFERED: "1"
+        run: python pipeline/mugshots.py --limit "${{ inputs.limit || '0' }}" ${{ inputs.recheck && '--recheck' || '' }}
+      - name: Commit
+        if: always()
+        run: |
+          git config user.name "preventable-tragedies-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout -- exports || true
+          git pull --rebase --autostash origin main
+          python pipeline/validate_data.py || { python pipeline/quarantine.py && python pipeline/validate_data.py; }
+          python pipeline/build_exports.py
+          git add data exports
+          git diff --cached --quiet || git commit -m "Mug shot sweep $(date -u +%F)"
+          git push

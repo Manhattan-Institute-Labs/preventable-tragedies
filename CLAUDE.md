@@ -5,8 +5,9 @@ A Manhattan Institute site that documents "preventable tragedies": serious crime
 ## Repo layout
 
 - `mockup/`: static four-page design mockup of the site (placeholder content). Its own `CLAUDE.md` covers structure, conventions, design rules and backlog.
+- `database/`: the frequent-offender case database and the pipeline that maintains it (news discovery, Claude classification with verbatim-quote checks, dedupe, second-source search), carried over from the Underincarcerated repo. `database/README.md` covers inclusion criteria, schema and commands. Workflows live in `.github/workflows/` and run with `database/` as their working directory. **These are real, named people:** the content rules below apply to every row.
 
-Other parts of the project (data, research, tooling) will get their own top-level folders.
+Other parts of the project (e.g. a colleague's parallel database) will get their own top-level folders.
 
 ## Content rules — important for this subject
 
