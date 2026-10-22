@@ -6471,12 +6471,12 @@
   "\"arrested\" \"times before\"": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 65
+   "gnews": 62
   },
   "\"arrests\" \"criminal history\" charged": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 21
+   "gnews": 94
   },
   "\"career criminal\" arrested": {
    "gdelt": 0,
@@ -6506,7 +6506,7 @@
   "\"felony convictions\" arrested": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 97
+   "gnews": 93
   },
   "\"free on bond\" arrested": {
    "gdelt": 0,
@@ -6531,17 +6531,17 @@
   "\"no bail\" arrested again": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 55
+   "gnews": 54
   },
   "\"on parole\" arrested": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 100
+   "gnews": 50
   },
   "\"on probation\" arrested": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 57
+   "gnews": 56
   },
   "\"out on bail\" arrested": {
    "gdelt": 0,
@@ -6556,12 +6556,12 @@
   "\"pretrial release\" arrested": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 39
+   "gnews": 100
   },
   "\"previously convicted\" arrested": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 100
+   "gnews": 17
   },
   "\"prior arrests\" charged": {
    "gdelt": 0,
@@ -6581,7 +6581,7 @@
   "\"prolific offender\"": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 100
+   "gnews": 33
   },
   "\"released early\" arrested": {
    "gdelt": 0,
@@ -6601,12 +6601,12 @@
   "\"repeat offender\" arrested": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 100
+   "gnews": 47
   },
   "\"repeat offender\" charged": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 100
+   "gnews": 34
   },
   "\"supervised release\" arrested": {
    "gdelt": 0,
