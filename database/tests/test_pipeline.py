@@ -400,17 +400,26 @@ def test_classify_article_uses_plain_text_reply(monkeypatch):
 
 def test_pack_decisions(tmp_path, monkeypatch):
     import gzip
+    from datetime import date, timedelta
     import pack_decisions
     monkeypatch.setattr(pack_decisions, "DECISIONS_DIR", tmp_path)
-    (tmp_path / "2026-09-05.jsonl").write_text('{"a":1}\n')
-    old = tmp_path / "2026-01-01.jsonl.gz"
+    today = date.today().isoformat()
+    (tmp_path / f"{today}.jsonl").write_text('{"a":1}\n')
+    # Old by name, fresh by mtime (as in a CI checkout): pruned.
+    old = tmp_path / f"{(date.today() - timedelta(days=40)).isoformat()}.jsonl.gz"
     old.write_bytes(b"x")
-    import os, time
-    os.utime(old, (time.time() - 40 * 86400,) * 2)
+    recent = tmp_path / f"{(date.today() - timedelta(days=10)).isoformat()}.jsonl.gz"
+    recent.write_bytes(b"x")
+    backfill = tmp_path / "backfill-2025-01-2026-09.jsonl.gz"
+    backfill.write_bytes(b"x")
     pack_decisions.main()
-    assert not (tmp_path / "2026-09-05.jsonl").exists()
-    assert gzip.open(tmp_path / "2026-09-05.jsonl.gz").read() == b'{"a":1}\n'
-    assert not old.exists()
+    assert not (tmp_path / f"{today}.jsonl").exists()
+    assert gzip.open(tmp_path / f"{today}.jsonl.gz").read() == b'{"a":1}\n'
+    assert not old.exists() and recent.exists() and backfill.exists()
+    # A second run the same day appends to the day's log instead of replacing it.
+    (tmp_path / f"{today}.jsonl").write_text('{"b":2}\n')
+    pack_decisions.main()
+    assert gzip.open(tmp_path / f"{today}.jsonl.gz").read() == b'{"a":1}\n{"b":2}\n'
 
 
 def test_obvious_same_incident_and_stateless_match():
