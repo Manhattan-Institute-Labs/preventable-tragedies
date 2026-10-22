@@ -1,0 +1,55 @@
+name: Categorize (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Rows per file to categorize (0 = all that need it)"
+        default: "0"
+      recheck:
+        description: "Categorize again rows that already have a category"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data-update
+  cancel-in-progress: false
+
+jobs:
+  categorize:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: database
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: database/requirements.txt
+      - run: pip install -r requirements.txt
+      - name: Categorize
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PYTHONUNBUFFERED: "1"
+        run: python pipeline/categorize.py --limit "${{ inputs.limit || '0' }}" --max-minutes 280 ${{ inputs.recheck && '--recheck' || '' }}
+      - name: Commit
+        if: always()
+        run: |
+          git config user.name "preventable-tragedies-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout -- exports || true
+          git pull --rebase --autostash origin main
+          python pipeline/validate_data.py || { python pipeline/quarantine.py && python pipeline/validate_data.py; }
+          python pipeline/build_exports.py
+          python pipeline/pack_decisions.py
+          git add data exports
+          git diff --cached --quiet || git commit -m "Categorize $(date -u +%F)"
+          git push

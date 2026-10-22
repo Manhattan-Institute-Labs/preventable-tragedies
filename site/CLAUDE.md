@@ -36,7 +36,7 @@ python3 -m http.server -d _site 8000      # then visit http://localhost:8000
 
 `build.py` turns each database row into the fields the templates read (`nameAge`, `dateLabel`, `headline`, `record.count`/`record.label`, `recordAlt`, `status`/`statusLabel`, `source.outlet`/`source.url`) and writes them to `_site/assets/js/stories-data.js` as `window.STORIES` and `window.CATEGORIES`. It's a plain script, not JSON loaded with `fetch`, so the built site also works from `file://`. The source pages without a build show no cases.
 
-**Field mapping rules** (in `build.py`): the headline is the offense type plus the outcome when the outcome is short; filter categories are the database's `new_offense_severity` values (the mockup's "escalating" and "serious mental illness" categories need data the database doesn't have yet); a card leads with prior arrests, else convictions, else felony convictions, showing only counts the article stated; `none stated` release status shows nothing on cards and "Not stated" on the landing page; `photo` stays `null` even where the database has a `mugshot_url`, until usage rights are confirmed.
+**Field mapping rules** (in `build.py`): the headline is the offense type plus the outcome when the outcome is short; filter categories are the database's `offender_category` values (frequent violent offender, very frequent petty offender, record not detailed; "not yet categorized" for rows the sweep hasn't reached; serious mental illness isn't categorized yet); a card leads with prior arrests, else convictions, else felony convictions, showing only counts the article stated; `none stated` release status shows nothing on cards and "Not stated" on the landing page; `photo` stays `null` even where the database has a `mugshot_url`, until usage rights are confirmed.
 
 ## How the code is organized
 
@@ -62,7 +62,7 @@ See the content rules in the repo-root `CLAUDE.md`. They apply to everything her
 ## Backlog / suggested next steps
 
 1. Replace the placeholder copy. The cases are real now (generated from `database/` by `build.py`).
-2. Add the colleague's database (and categories for escalating records and serious mental illness) to the build.
+2. Add the colleague's database (and a serious-mental-illness category) to the build.
 3. Add a story detail page (e.g. `story.html?id=case-001`) and link cards to it.
 4. Drive the Facts and Solve charts from real data. Hand-built SVG is fine, or move to a chart library if they multiply.
 5. Wire the sign-up forms to the email provider (`TODO` in `initSignup`) and add a privacy policy.

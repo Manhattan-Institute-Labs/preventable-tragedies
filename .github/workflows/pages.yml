@@ -18,6 +18,7 @@ on:
       - Second-source search (manual)
       - Mug shot sweep (manual)
       - Backfill (manual)
+      - Categorize (manual)
     types: [completed]
   workflow_dispatch:
 
