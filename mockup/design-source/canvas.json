@@ -1,0 +1,68 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Facts.dc.html": {
+      "expand": "fill",
+      "h": 6200,
+      "is_interactive": true,
+      "title": "3 · Get the facts",
+      "w": 1440,
+      "x": 3040,
+      "y": 0
+    },
+    "Main.dc.html": {
+      "expand": "fill",
+      "h": 2900,
+      "is_interactive": true,
+      "title": "1 · Landing",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "Solve.dc.html": {
+      "expand": "fill",
+      "h": 5000,
+      "is_interactive": true,
+      "title": "4 · Solve the problem",
+      "w": 1440,
+      "x": 4560,
+      "y": 0
+    },
+    "Stories.dc.html": {
+      "expand": "fill",
+      "h": 2700,
+      "is_interactive": true,
+      "title": "2 · Read the stories",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-21T15:00:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "title": {
+      "kind": "title1",
+      "maxW": 6000,
+      "text": "Preventable Tragedies — site mockup (placeholder content)",
+      "w": 240,
+      "x": 0,
+      "y": -320
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Stories.dc.html",
+    "Facts.dc.html",
+    "Solve.dc.html"
+  ],
+  "pages": [],
+  "title": "Preventable Tragedies Mockup"
+}

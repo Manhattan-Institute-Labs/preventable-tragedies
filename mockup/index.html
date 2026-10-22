@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Preventable Tragedies</title>
+  <meta name="description" content="[Site description for search and social previews]">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800;900&amp;family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&amp;display=swap">
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <script src="assets/js/stories-data.js" defer></script>
+  <script src="assets/js/main.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="mock-banner">Design mockup · Placeholder copy, cases and images</div>
+
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a href="index.html" class="wordmark">
+        PREVENTABLE TRAGEDIES
+        <svg class="slash" width="30" height="24" viewBox="0 0 30 24" aria-hidden="true"><path d="M8 0h6L6 24H0Z"/><path d="M20 0h6l-8 24h-6Z"/></svg>
+      </a>
+      <nav class="site-nav" aria-label="Main">
+        <a href="stories.html">Read the stories</a>
+        <a href="facts.html">Get the facts</a>
+        <a href="solve.html">Solve the problem</a>
+        <a href="#signup" class="btn btn--primary btn--sm">Sign up</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <!-- Hero -->
+    <section class="section--white">
+      <div class="container hero">
+        <div class="split">
+          <div class="hero__copy">
+            <div class="kicker">[Tagline: one line on the site’s mission]</div>
+            <h1 class="h1">[Headline: the core message of the site, 8–12 words]</h1>
+            <p class="lede">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+            <div class="row">
+              <a href="stories.html" class="btn btn--primary">Read the stories</a>
+              <a href="facts.html" class="btn btn--secondary">Get the facts</a>
+            </div>
+          </div>
+          <div class="stat-grid">
+            <div class="stat"><div class="stat__value">[000]</div><div class="stat__label">[Stat label]</div></div>
+            <div class="stat"><div class="stat__value">[00]</div><div class="stat__label">[Stat label]</div></div>
+            <div class="stat"><div class="stat__value">[00]%</div><div class="stat__label">[Stat label]</div></div>
+            <div class="stat"><div class="stat__value">[00]</div><div class="stat__label">[Stat label]</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Random case from the database (filled by main.js) -->
+    <section class="section section--sky" aria-labelledby="case-h">
+      <div class="container stack stack--lg">
+        <div class="row row--between row--bottom">
+          <div class="stack stack--sm">
+            <div class="kicker">From the archive · Case <span id="random-case-num">[#]</span></div>
+            <h2 id="case-h" class="h2">[Section title: a random case]</h2>
+          </div>
+          <button type="button" id="random-case-next" class="btn btn--secondary btn--sm">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>
+            Show another case
+          </button>
+        </div>
+
+        <article id="random-case" class="feature-case">
+          <div class="feature-case__photo">
+            <div data-photo>
+              <svg class="photo-placeholder" viewBox="0 0 120 150" role="img" aria-label="Booking photo placeholder"><rect class="bg" width="120" height="150"/><g class="lines"><line x1="0" y1="20" x2="120" y2="20"/><line x1="0" y1="40" x2="120" y2="40"/><line x1="0" y1="60" x2="120" y2="60"/><line x1="0" y1="80" x2="120" y2="80"/><line x1="0" y1="100" x2="120" y2="100"/><line x1="0" y1="120" x2="120" y2="120"/><line x1="0" y1="140" x2="120" y2="140"/></g><circle class="ph-fig" cx="60" cy="62" r="22"/><path class="ph-fig" d="M16 150 C16 112 38 96 60 96 C82 96 104 112 104 150 Z"/></svg>
+            </div>
+            <div class="meta">[Photo credit / agency]</div>
+          </div>
+          <div class="feature-case__body">
+            <div class="row">
+              <span class="tag tag--solid" data-field="category">[Category]</span>
+              <span class="meta"><span data-field="place">[City, State]</span> · <span data-field="date">[Date]</span></span>
+            </div>
+            <h3 class="h3" data-field="headline" aria-live="polite">[Case headline]</h3>
+            <p class="body-lg text-body flush" data-field="summary">[Two- to three-sentence case summary.] Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+            <div class="record-strip">
+              <div><div class="record-strip__value record-strip__value--accent" data-field="priorArrests">[00]</div><div class="record-strip__label">prior arrests</div></div>
+              <div><div class="record-strip__value" data-field="priorViolent">[0]</div><div class="record-strip__label">prior violent charges</div></div>
+              <div><div class="record-strip__value record-strip__value--text" data-field="status">[Release status]</div><div class="record-strip__label">status at time of crime</div></div>
+            </div>
+            <div class="link-row">
+              <a href="https://example.com" data-href="source.url" target="_blank" rel="noopener">Source: <span data-field="source.outlet">[Outlet]</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg>
+              </a>
+              <a href="stories.html" class="link-plain">All stories →</a>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Pathways to the other three pages -->
+    <section class="section" aria-label="Explore">
+      <div class="container path-grid">
+        <a href="stories.html" class="path-card">
+          <div class="path-card__num">01</div>
+          <div class="path-card__title">Read the stories</div>
+          <p>[Description of the stories index.] Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.</p>
+          <div class="path-card__cta">Browse the index →</div>
+        </a>
+        <a href="facts.html" class="path-card">
+          <div class="path-card__num">02</div>
+          <div class="path-card__title">Get the facts</div>
+          <p>[Description of the research explainer.] Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.</p>
+          <div class="path-card__cta">Read the evidence →</div>
+        </a>
+        <a href="solve.html" class="path-card path-card--accent">
+          <div class="path-card__num">03</div>
+          <div class="path-card__title">Solve the problem</div>
+          <p>[Description of the five policy proposals.] Duis aute irure dolor in reprehenderit in voluptate velit esse.</p>
+          <div class="path-card__cta">See the proposals →</div>
+        </a>
+      </div>
+    </section>
+
+    <!-- Email sign-up -->
+    <section id="signup" class="section section--dark" aria-labelledby="signup-h">
+      <div class="container split">
+        <div class="stack">
+          <div class="kicker-row">
+            <div class="kicker kicker--orange">The email list</div>
+            <svg class="slash slash--orange" width="30" height="16" viewBox="0 0 30 16" aria-hidden="true"><path d="M8 0h5L5 16H0Z"/><path d="M20 0h5l-8 16h-5Z"/></svg>
+          </div>
+          <h2 id="signup-h" class="h2">[Email sign-up headline]</h2>
+          <p class="lede">[What subscribers get and how often.] Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+        </div>
+        <div class="stack">
+          <form class="signup-form" data-signup novalidate>
+            <label class="field-label" for="email">Email address</label>
+            <div class="input-row">
+              <input class="input" id="email" name="email" type="email" required autocomplete="email" placeholder="you@example.com">
+              <button type="submit" class="btn btn--primary">Sign up</button>
+            </div>
+            <label class="field-label" for="zip">ZIP code <span class="fine-print">(optional)</span></label>
+            <input class="input input--quiet input--zip" id="zip" name="zip" type="text" inputmode="numeric" autocomplete="postal-code">
+          </form>
+          <div class="signup-confirm" data-signup-confirm hidden tabindex="-1">[Confirmation message]</div>
+          <div class="fine-print">[Privacy policy] · Unsubscribe anytime</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="container site-footer">
+    <div>PREVENTABLE TRAGEDIES · A project of the Manhattan Institute</div>
+    <nav aria-label="Footer">
+      <a href="stories.html">Stories</a>
+      <a href="facts.html">Facts</a>
+      <a href="solve.html">Solutions</a>
+      <a href="#">Submit a case</a>
+      <a href="#">Methodology</a>
+    </nav>
+  </footer>
+</body>
+</html>
