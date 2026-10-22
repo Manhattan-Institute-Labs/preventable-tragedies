@@ -3,5 +3,5 @@ Database of preventable tragedies: crimes by frequent offenders and people with 
 
 ## Contents
 
-- [`mockup/`](mockup/): static four-page design mockup of the site. All content is placeholder.
+- [`site/`](site/): the site (first draft), published to GitHub Pages. The landing page and stories index show real cases from the database; other copy is placeholder.
 - [`database/`](database/): the frequent-offender case database and the daily pipeline that maintains it, carried over from [Underincarcerated](https://github.com/CharlesFainLehman/underincarcerated).

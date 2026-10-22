@@ -1,8 +1,8 @@
-# Preventable Tragedies — site mockup
+# Preventable Tragedies — site
 
-The design mockup for the Preventable Tragedies site (project overview and content rules are in the repo-root `CLAUDE.md`). Paths below are relative to this `mockup/` folder.
+The Preventable Tragedies site (project overview and content rules are in the repo-root `CLAUDE.md`). Paths below are relative to this `site/` folder.
 
-**Status:** design mockup. All copy is placeholder (`[Bracketed descriptions]` + lorem ipsum). Chart values are illustrative. Mugshots are SVG placeholders. Nothing here is real data yet.
+**Status:** first draft, published to GitHub Pages by `.github/workflows/pages.yml`. The landing page's random case and the stories index show **real cases** from `database/exports/stories.json`. All other copy is placeholder (`[Bracketed descriptions]` + lorem ipsum), chart values are illustrative, and photos are SVG placeholders. Pages carry `noindex` and a draft banner.
 
 ## Pages
 
@@ -19,25 +19,28 @@ The design mockup for the Preventable Tragedies site (project overview and conte
 index.html  stories.html  facts.html  solve.html
 assets/
   css/styles.css        design tokens (CSS custom properties) + all component classes
-  js/stories-data.js    the story "database": window.STORIES + window.CATEGORIES, with a documented schema
   js/main.js            all behavior: random case, sign-up, index filters, scrollytelling
+build.py                builds ../_site/: copies the pages and assets, generates assets/js/stories-data.js
 docs/design-system.md   MI brand rules this design follows (colors, type, slash motif, charts)
 design-source/          the original Claude Design canvas files (reference only; see below)
 ```
 
 ## Running it
 
-There's no build step and no dependencies. Open `index.html` in a browser, or serve the folder:
+From the repo root (standard library only, no installs):
 
 ```
-python3 -m http.server 8000   # then visit http://localhost:8000
+python3 site/build.py                     # writes _site/ (gitignored)
+python3 -m http.server -d _site 8000      # then visit http://localhost:8000
 ```
 
-`stories-data.js` is a plain script, not JSON loaded with `fetch`, so the site also works from `file://`.
+`build.py` turns each database row into the fields the templates read (`nameAge`, `dateLabel`, `headline`, `record.count`/`record.label`, `recordAlt`, `status`/`statusLabel`, `source.outlet`/`source.url`) and writes them to `_site/assets/js/stories-data.js` as `window.STORIES` and `window.CATEGORIES`. It's a plain script, not JSON loaded with `fetch`, so the built site also works from `file://`. The source pages without a build show no cases.
+
+**Field mapping rules** (in `build.py`): the headline is the offense type plus the outcome when the outcome is short; filter categories are the database's `new_offense_severity` values (the mockup's "escalating" and "serious mental illness" categories need data the database doesn't have yet); a card leads with prior arrests, else convictions, else felony convictions, showing only counts the article stated; `none stated` release status shows nothing on cards and "Not stated" on the landing page; `photo` stays `null` even where the database has a `mugshot_url`, until usage rights are confirmed.
 
 ## How the code is organized
 
-- **Static HTML + one stylesheet + one script.** Every page loads `styles.css` and `main.js`. Pages that show cases (`index`, `stories`) also load `stories-data.js` first.
+- **Static HTML + one stylesheet + one script.** Every page loads `styles.css` and `main.js`. Pages that show cases (`index`, `stories`) also load the generated `stories-data.js` first.
 - **`main.js` init functions guard themselves.** `initRandomCase`, `initSignup`, `initIndex` and `initScrolly` each look for their own markup and do nothing if it's missing.
 - **Templates are declarative.** Story markup lives in HTML (the `#random-case` article and the `<template id="story-card-template">`). Elements say what they show with `data-field="headline"`, `data-field="source.outlet"`, `data-href="source.url"` and `data-photo`. `fill()` in `main.js` populates them using `textContent`, never `innerHTML`.
 - **Scrollytelling:** `.scrolly` contains `.step[data-step="n"]` blocks and chart layers marked `[data-hl="n"]`. An IntersectionObserver sets `.scrolly[data-active]` and CSS fades the matching layer in. On narrow screens and with reduced motion, every layer stays visible.
@@ -58,15 +61,15 @@ See the content rules in the repo-root `CLAUDE.md`. They apply to everything her
 
 ## Backlog / suggested next steps
 
-1. Replace placeholder copy and the nine sample records in `stories-data.js` with real, sourced cases (the schema is documented at the top of that file).
-2. Decide where the case database lives (Airtable, a CMS or a JSON file in the repo) and load it at build time or runtime, keeping the same field names.
+1. Replace the placeholder copy. The cases are real now (generated from `database/` by `build.py`).
+2. Add the colleague's database (and categories for escalating records and serious mental illness) to the build.
 3. Add a story detail page (e.g. `story.html?id=case-001`) and link cards to it.
 4. Drive the Facts and Solve charts from real data. Hand-built SVG is fine, or move to a chart library if they multiply.
 5. Wire the sign-up forms to the email provider (`TODO` in `initSignup`) and add a privacy policy.
 6. Build "Submit a case" and "Methodology" pages, which are linked from the footer and stories page.
 7. If the header, footer and page count become painful to maintain, move to a static-site generator (Eleventy or Astro). The CSS and JS carry over as-is.
-8. Before launch: Open Graph and social tags, favicon, analytics, a deploy target, and a Lighthouse/accessibility pass.
+8. Before launch: remove `noindex` and the draft banner, Open Graph and social tags, favicon, analytics, a custom domain, and a Lighthouse/accessibility pass. Wording about named people needs editorial and legal review (see the root `CLAUDE.md`).
 
 ## design-source/
 
-These are the original artboards from the Claude Design canvas ("Preventable Tragedies Mockup", https://claude.ai/artifact/JEfeCRBWw4KhM6ABedHdFA). They use a canvas-only component format (`<x-dc>`, `<sc-for>`, `{{holes}}`) and **won't render outside that editor**. Use them only to compare against the design. The HTML pages in the project root are the working source.
+These are the original artboards from the Claude Design canvas ("Preventable Tragedies Mockup", https://claude.ai/artifact/JEfeCRBWw4KhM6ABedHdFA). They use a canvas-only component format (`<x-dc>`, `<sc-for>`, `{{holes}}`) and **won't render outside that editor**. Use them only to compare against the design. The HTML pages in `site/` are the working source.

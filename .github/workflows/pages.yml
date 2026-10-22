@@ -1,0 +1,53 @@
+name: Deploy site
+
+# Build site/ with the current database exports and publish to GitHub Pages.
+# Commits pushed by the data workflows use GITHUB_TOKEN, which does not fire
+# push events, so those workflows trigger a deploy through workflow_run.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - "database/exports/**"
+      - ".github/workflows/pages.yml"
+  workflow_run:
+    workflows:
+      - Daily update
+      - Rebuild exports
+      - Second-source search (manual)
+      - Mug shot sweep (manual)
+      - Backfill (manual)
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python site/build.py
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

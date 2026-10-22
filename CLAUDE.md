@@ -4,7 +4,7 @@ A Manhattan Institute site that documents "preventable tragedies": serious crime
 
 ## Repo layout
 
-- `mockup/`: static four-page design mockup of the site (placeholder content). Its own `CLAUDE.md` covers structure, conventions, design rules and backlog.
+- `site/`: the static four-page site (first draft, on GitHub Pages). `site/build.py` generates its case data from `database/exports/`; other copy is placeholder. Its own `CLAUDE.md` covers structure, conventions, design rules and backlog.
 - `database/`: the frequent-offender case database and the pipeline that maintains it (news discovery, Claude classification with verbatim-quote checks, dedupe, second-source search), carried over from the Underincarcerated repo. `database/README.md` covers inclusion criteria, schema and commands. Workflows live in `.github/workflows/` and run with `database/` as their working directory. **These are real, named people:** the content rules below apply to every row.
 
 Other parts of the project (e.g. a colleague's parallel database) will get their own top-level folders.
@@ -15,4 +15,4 @@ Other parts of the project (e.g. a colleague's parallel database) will get their
 - Keep the distinction between **arrests, charges and convictions** accurate in copy and data fields. Wording about named individuals needs editorial and legal review before launch.
 - **Booking photos:** confirm usage rights and the source agency. The `photo` field is `null` until then.
 - **Facts page figures** must come from the cited research (the numbered sources list). Keep the "what the data does not show" context box in the mental-illness chapter.
-- Placeholders use `[Square brackets]`, so `grep -n "\[" mockup/*.html` finds what's left to write.
+- Placeholders use `[Square brackets]`, so `grep -n "\[" site/*.html` finds what's left to write.
