@@ -11,7 +11,7 @@ were free at the time because of a release decision (bail, bond, probation, paro
 release, early release, dropped charges).
 
 The backend follows [flock-crime-tracker](https://github.com/CharlesFainLehman/flock-crime-tracker).
-The front end is the site in [`../mockup/`](../mockup/), not yet wired to this data; the pipeline
+The front end is the site in [`../site/`](../site/), whose `build.py` reads `exports/stories.json`; the pipeline
 writes `exports/stories.json`, `exports/offenders.json`, and `exports/stats.json` for it.
 
 Everything here lives in `database/`, and paths below are relative to it. The GitHub Actions
@@ -160,7 +160,7 @@ seen-URL caches, and the gzipped decision logs), the corrections policy
 (`content/corrections.md`), the design notes and to-do list from the old repo (`docs/`), the
 workflows, and the issue forms.
 
-Left behind: the old Underincarcerated front end (`site/*.html`, `content/facts.md`, and
+Left behind: the old Underincarcerated front end (its `site/*.html`, `content/facts.md`, and
 `build_pages.py`, which rendered Markdown into it) and its GitHub Pages deploy steps.
 `exports/` replaces `site/` as the output folder. Much of `docs/TODO.md` is about that old front
 end.
