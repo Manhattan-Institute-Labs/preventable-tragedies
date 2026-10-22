@@ -1,0 +1,166 @@
+# Frequent-offender database
+
+The Preventable Tragedies case database, carried over from
+[Underincarcerated](https://github.com/CharlesFainLehman/underincarcerated) on 2026-10-22
+(data as of that repo's commit `c08aff9`). That repo is the archive: its commit history is
+the day-by-day audit log up to the move.
+
+A daily-updated database of news stories about repeat offenders: people arrested, charged,
+or convicted for a new crime in the United States who had a documented prior record, or who
+were free at the time because of a release decision (bail, bond, probation, parole, pretrial
+release, early release, dropped charges).
+
+The backend follows [flock-crime-tracker](https://github.com/CharlesFainLehman/flock-crime-tracker).
+The front end is the site in [`../mockup/`](../mockup/), not yet wired to this data; the pipeline
+writes `exports/stories.json`, `exports/offenders.json`, and `exports/stats.json` for it.
+
+Everything here lives in `database/`, and paths below are relative to it. The GitHub Actions
+workflows are in the repo-root `.github/workflows/` and run with `database/` as their working
+directory.
+
+## How it works
+
+1. **Discovery.** Each day, candidate articles are pulled from the
+   [GDELT DOC 2.0 API](https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/) with six
+   OR-grouped queries (splitting the window when one hits GDELT's 250-record cap) and from
+   Google News RSS with ~30 narrow queries such as `"repeat offender" arrested` and
+   `"out on bond" arrested` ([pipeline/fetch.py](pipeline/fetch.py),
+   [pipeline/config.py](pipeline/config.py)).
+2. **Triage.** Headlines are screened in batches of 25 by Claude Haiku before any article is
+   fetched or any Google News redirect is decoded. Policy pieces, blotters, and non-US stories
+   are dropped here; anything plausible is kept ([pipeline/triage.py](pipeline/triage.py)).
+3. **Classification.** Each surviving article's text is extracted and classified by Haiku as
+   qualifying or not, with structured fields: offender, new offense, prior counts, release
+   status, and two verbatim evidence quotes ([pipeline/classify.py](pipeline/classify.py)).
+4. **Verification.** A row is rejected unless both evidence quotes appear verbatim in the
+   fetched article text. This is the guard against the model inventing or inflating a record.
+5. **Deduplication.** New rows are compared against rows for the same person and rows in the
+   same state within 21 days. Same incident: the URL is attached to the existing row. Same
+   person, new incident: a new row sharing the offender key ([pipeline/dedupe.py](pipeline/dedupe.py)).
+6. **Publishing.** The database is [data/stories.csv](data/stories.csv). `data/offenders.csv`
+   and everything in `exports/` are derived from it (plus `data/backfill/stories.csv`) by
+   [pipeline/build_exports.py](pipeline/build_exports.py).
+
+The daily job is [.github/workflows/daily.yml](../.github/workflows/daily.yml). Its commit
+history is an audit log of what was added each day. Every triage, classify, verify, and
+dedupe decision is written to a JSONL log uploaded as a workflow artifact.
+
+## Inclusion criteria
+
+A record must describe a **specific, identifiable person** arrested, charged, or convicted for
+a **new offense in the United States**, and the article must state at least one of:
+
+1. one or more prior convictions or arrests, with some specificity (a count, a named prior
+   offense, a prior sentence, or a prior prison term);
+2. that the person was on pretrial release, bail, bond, probation, parole, supervised release,
+   or in a diversion program at the time of the new offense;
+3. that the person had been released early, had charges dropped or reduced, or had been denied
+   detention in a prior case that the article connects to the new offense.
+
+Only **strict** stories are stored (since 2026-09-08): 5+ prior arrests, or 5+ prior
+convictions, or 3+ prior felony convictions, as stated in the article. Counts are never
+estimated: "more than a dozen" is 13, "numerous" is blank. Stories that meet the conditions
+above but not the strict threshold are classified and logged, then dropped
+(`STRICT_ONLY` in `config.py`). The `qualifies_strict` column is therefore always `yes`; it
+is kept so older exports and tools keep working.
+
+Not stored: anyone under 18, and anyone the article does not report as arrested, charged,
+indicted, convicted, or sentenced. Every stated prior count must appear in the article text.
+Summaries of unproven allegations are attributed to the outlet. Rows removed after
+publication go to `data/removed.csv` with a reason (`python pipeline/remove_story.py --id N
+--reason "..."`); their ids are never reused and `exports/removed.json` keeps a tombstone. The corrections
+policy is `content/corrections.md`.
+
+A second-source search (`corroborate.py`) runs on new rows at the end of each daily run and
+on demand for the whole database: it queries Google News for the offender's name and place
+around the incident date, and adds another outlet's report to `additional_sources` when the
+model confirms it covers the same person and incident. `corroboration_checked` records the
+date of the last search. Rows whose primary source is on `TRUSTED_OUTLETS` in `config.py`
+(national outlets and metro dailies with professional newsrooms) skip the search. The old Underincarcerated stories page could filter to records with two or more outlets.
+
+**Publication rule** (`REQUIRE_CORROBORATION`, 2026-09-08): a story is published only when two
+or more distinct outlets report it, or its primary source is on `TRUSTED_OUTLETS`. New rows
+stay in the data files but out of `exports/` until the second-source search has run on them;
+`enforce_sources.py` then moves rows the search left single-sourced to `data/removed.csv`.
+
+The database is a collection of stories, not a census. It holds what the news covered, what
+the searches found, and what the article stated. Daily runs are capped at 150 articles
+(`max_classify`), ranked by headline signals, so a busy news day is sampled, not exhausted.
+
+**Excluded by rule:**
+- policy, statistics, editorial, and opinion pieces with no specific new incident
+- "repeat offender" or "known to police" used as a label with no concrete prior
+- priors that are only traffic infractions, or a juvenile record with no detail
+- re-arrest on the same case (failure to appear, bond violation, retrial)
+- crimes outside the United States
+- police blotters, arrest logs, mugshot aggregators, and wire/press-release sources
+- wrongful-arrest and exoneration stories
+
+## Schema
+
+One row per new-offense incident in `data/stories.csv`:
+
+| Column | Notes |
+|---|---|
+| `id`, `date_added` | |
+| `incident_date` | new offense; YYYY-MM-DD, YYYY-MM, or YYYY |
+| `city`, `state` | state always set when known |
+| `offender_name`, `offender_key` | name as printed; key is `last_first_ST`, links rows for one person |
+| `age` | |
+| `new_offense_type`, `new_offense_severity` | controlled vocabularies in `config.py` |
+| `prior_count_arrests`, `prior_count_convictions`, `prior_count_felony_convictions` | only when the article states a number |
+| `prior_offenses` | named priors, semicolon-separated |
+| `prior_evidence_quote` | verbatim sentence from the article; verified |
+| `release_status` | controlled vocabulary; `none stated` if the article is silent |
+| `release_evidence_quote` | verbatim; verified; required when status is not `none stated` |
+| `releasing_jurisdiction` | |
+| `outcome`, `summary` | |
+| `qualifies_strict` | yes/no, from the counts |
+| `source_name`, `source_url`, `additional_sources`, `confidence` | |
+
+`data/offenders.csv` has one row per `offender_key`: name, state, story ids, incident count,
+first and last incident date, max prior counts, strict flag. Never edit it by hand.
+
+## Caveats
+
+- Entries reflect claims made in news reports, which typically rely on police and prosecutor
+  statements. Inclusion is not independent verification of the record.
+- Coverage is limited to English-language US outlets indexed by GDELT and Google News.
+- Classification is automated. The old site gave every record a flag link that opened a
+  pre-filled issue (the issue forms are in `.github/ISSUE_TEMPLATE/`); new feedback issues get an automated first review (`review_feedback.py`)
+  and a `triage:*` label, and the maintainer makes the final call. Corrections are made by
+  editing `data/stories.csv` or `data/backfill/stories.csv` directly; `validate_data.py`
+  runs before every commit.
+
+## Running locally
+
+```bash
+cd database
+pip install -r requirements.txt
+export ANTHROPIC_API_KEY=...
+python pipeline/run_daily.py                    # one daily update
+DAYS_BACK=3 MAX_CLASSIFY=200 python pipeline/run_daily.py   # wider net, bounded run
+python pipeline/backfill.py --start 2025-01 --end 2025-06 --max-per-week 150   # or the Backfill workflow in Actions
+python pipeline/build_exports.py               # rebuild exports/ from the CSVs only
+python pipeline/validate_data.py
+python -m pytest -q                            # offline tests, no API key needed
+```
+
+The backfill searches Google News week by week with date operators (GDELT throttled nearly
+every request from both GitHub's and a home IP; `--source gdelt` remains available). Each week
+is capped at `--max-per-week` articles, best headlines first. It writes only to
+`data/backfill/`, records completed weeks and resumes on rerun, and with `--push-progress`
+commits that directory after every week. The "Backfill (manual)" workflow runs it on Actions
+in 300-minute slices; rerun the same range until it reports no weeks left.
+
+## What came over and what didn't
+
+Carried over: `pipeline/`, `tests/`, `data/` (including removed and quarantined rows, the
+seen-URL caches, and the gzipped decision logs), the corrections policy
+(`content/corrections.md`), the design notes and to-do list from the old repo (`docs/`), the
+workflows, and the issue forms.
+
+Left behind: the old Underincarcerated front end (`site/*.html`, `content/facts.md`, and
+`build_pages.py`, which rendered Markdown into it) and its GitHub Pages deploy steps.
+`exports/` replaces `site/` as the output folder. Much of `docs/TODO.md` is about that old front
+end.

@@ -1,0 +1,88 @@
+name: Backfill (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      start:
+        description: "Start month (YYYY-MM)"
+        required: true
+        default: "2025-01"
+      end:
+        description: "End month (YYYY-MM)"
+        required: true
+        default: "2026-09"
+      max_per_week:
+        description: "Articles fetched and classified per week (0 = no cap)"
+        default: "150"
+      source:
+        description: "gnews (works from Actions) or gdelt"
+        default: "gnews"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data-update  # never alongside the daily job or another backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: database
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: database/requirements.txt
+
+      - run: pip install -r requirements.txt
+
+      - name: Configure git for progress pushes
+        run: |
+          git config user.name "preventable-tragedies-bot"
+          git config user.email "actions@users.noreply.github.com"
+
+      - name: Run backfill ${{ inputs.start }} .. ${{ inputs.end }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PYTHONUNBUFFERED: "1"
+        run: >-
+          python -u pipeline/backfill.py --start "${{ inputs.start }}" --end "${{ inputs.end }}"
+          --source "${{ inputs.source || 'gnews' }}" --max-per-week "${{ inputs.max_per_week || '150' }}"
+          --max-minutes 300 --push-progress
+
+      - name: Find mug shots for new stories
+        if: always()
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PYTHONUNBUFFERED: "1"
+        run: python pipeline/mugshots.py
+
+      - name: Upload decision log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backfill-decisions-${{ inputs.start }}-${{ inputs.end }}
+          path: database/data/decisions/
+          if-no-files-found: ignore
+          retention-days: 90
+
+      - name: Commit updated data and exports
+        if: always()  # keep checkpoint progress even if a late week errors
+        run: |
+          git checkout -- exports || true
+          git pull --rebase --autostash origin main
+          python pipeline/validate_data.py || { python pipeline/quarantine.py && python pipeline/validate_data.py; }
+          python pipeline/build_exports.py
+          python pipeline/pack_decisions.py
+          git add data exports
+          git diff --cached --quiet || git commit -m "Backfill ${{ inputs.start }}..${{ inputs.end }}"
+          git push
