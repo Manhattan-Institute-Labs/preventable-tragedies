@@ -938,3 +938,54 @@ def test_resolve_candidate_accepts_both_decoder_result_shapes(monkeypatch):
         c = {"url": "https://news.google.com/rss/articles/abc"}
         fetch.resolve_candidate(c)
         assert c["url"].startswith("https://news.google.com"), res
+
+
+# ---- offender categories ---------------------------------------------------
+
+def test_categorize_parse_and_coerce():
+    from categorize import parse_result
+    r = parse_result('Sure. {"category": "violent-ish", "violent_priors": 3, "reason": "r"}')
+    assert r.category == "unclassified" and r.violent_priors == 3
+
+
+def test_categorize_verify_requires_quote_and_two_violent_priors():
+    from categorize import CategoryResult, verify
+    quote = "Court records show Smith has been arrested 11 times since 2015"
+    ok = CategoryResult(category="violent", violent_priors=2, evidence_quote=quote, reason="r")
+    assert verify(ok, {}, ARTICLE).category == "violent"
+    one = ok.model_copy(update={"violent_priors": 1})
+    assert verify(one, {}, ARTICLE).category == "unclassified"
+    made_up = ok.model_copy(update={"evidence_quote": "Smith has four prior convictions for armed robbery"})
+    assert verify(made_up, {}, ARTICLE).category == "unclassified"
+    # No article: the stored prior_evidence_quote (verified at ingest) counts as the source.
+    petty = CategoryResult(category="petty", violent_priors=0, evidence_quote=quote, reason="r")
+    assert verify(petty, {"prior_evidence_quote": quote + ", records show."}, None).category == "petty"
+    unc = CategoryResult(category="unclassified", reason="only counts")
+    assert verify(unc, {}, None) is unc
+
+
+def test_categorize_sweep_stores_category_and_reason(monkeypatch, tmp_path):
+    import categorize as ca
+    import store
+    path = tmp_path / "stories.csv"
+    r1 = make_row(1, _cls(), {"url": "https://wxyz.com/a", "source": "WXYZ"})
+    r2 = make_row(2, _cls(offender_name="Ann Lee"), {"url": "https://wxyz.com/b", "source": "WXYZ"})
+    store.save_stories([r1, r2], path)
+    monkeypatch.setattr(ca, "fetch_article_text", lambda u: ARTICLE)
+    monkeypatch.setattr(ca, "ask", lambda c, row, text: ca.CategoryResult(
+        category="petty", violent_priors=0, reason="theft priors",
+        evidence_quote="Court records show Smith has been arrested 11 times since 2015"))
+    log = process.DecisionLog(tmp_path / "log.jsonl")
+    counts = ca.sweep(None, path, log=log)
+    rows = {r["id"]: r for r in store.load_stories(path)}
+    assert counts["checked"] == 2 and counts["petty"] == 2
+    assert rows["1"]["offender_category"] == "petty" and rows["1"]["category_reason"] == "theft priors"
+    assert not validate_data.row_problems(rows["1"])
+    # Second pass does nothing: both rows have a category.
+    assert ca.sweep(None, path, log=log)["checked"] == 0
+
+
+def test_validate_rejects_unknown_category():
+    row = make_row(1, _cls(), {"url": "https://wxyz.com/a", "source": "WXYZ"})
+    assert any("offender_category" in p for p in validate_data.row_problems({**row, "offender_category": "bad"}))
+    assert any("category_reason" in p for p in validate_data.row_problems({**row, "offender_category": "petty"}))

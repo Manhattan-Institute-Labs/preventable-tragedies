@@ -29,6 +29,9 @@ TRIAGE_MODEL = "claude-haiku-4-5"
 CLASSIFY_MODEL = "claude-haiku-4-5"
 DEDUPE_MODEL = "claude-haiku-4-5"
 REVIEW_MODEL = "claude-sonnet-5"
+# Offender categories (categorize.py): a judgment over the whole prior record,
+# low volume (backlog once, then ~1 row a day).
+CATEGORIZE_MODEL = "claude-opus-5-5"
 
 TRIAGE_BATCH_SIZE = 25
 
@@ -177,7 +180,17 @@ CSV_COLUMNS = [
     "additional_sources",
     "confidence",
     "corroboration_checked",  # date the second-source search last ran for this row
+    "offender_category",      # OFFENDER_CATEGORIES; blank = not yet categorized
+    "category_reason",        # one line: which priors put the row in its category
 ]
+
+# Offender categories, decided by the prior record as the article states it
+# (the new offense is tracked separately in new_offense_*). See categorize.py.
+#   violent       frequent violent offender: two or more violent priors
+#   petty         very frequent petty offender: fewer than two violent priors,
+#                 record otherwise described and mostly low-level
+#   unclassified  the article does not describe the record well enough to tell
+OFFENDER_CATEGORIES = ["violent", "petty", "unclassified"]
 
 OFFENDER_COLUMNS = [
     "offender_key",

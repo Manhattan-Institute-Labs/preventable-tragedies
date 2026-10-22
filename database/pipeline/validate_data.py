@@ -14,7 +14,7 @@ from datetime import date, timedelta
 
 from classify import qualifies_strict
 from config import (BACKFILL_ID_BASE, BACKFILL_STORIES_CSV, DATA_DIR, MIN_AGE, NEW_OFFENSE_TYPES,
-                    OFFENSE_SEVERITIES, RELEASE_STATUSES, REMOVED_CSV, STORED_OUTCOME_RE,
+                    OFFENDER_CATEGORIES, OFFENSE_SEVERITIES, RELEASE_STATUSES, REMOVED_CSV, STORED_OUTCOME_RE,
                     STORIES_CSV, US_STATES)
 
 MARKERS = ("<<<<<<<", "=======", ">>>>>>>")
@@ -45,6 +45,11 @@ def row_problems(r: dict, horizon: str | None = None) -> list[str]:
         out.append(f"new_offense_type {r['new_offense_type']!r} outside vocabulary")
     if r.get("new_offense_severity") and r["new_offense_severity"] not in OFFENSE_SEVERITIES:
         out.append(f"new_offense_severity {r['new_offense_severity']!r} outside vocabulary")
+    if r.get("offender_category"):
+        if r["offender_category"] not in OFFENDER_CATEGORIES:
+            out.append(f"offender_category {r['offender_category']!r} outside vocabulary")
+        elif not r.get("category_reason"):
+            out.append("offender_category set without category_reason")
     if r.get("release_status") not in RELEASE_STATUSES:
         out.append(f"release_status {r.get('release_status')!r} outside vocabulary")
     else:

@@ -24,13 +24,14 @@ STORIES_JSON = REPO_ROOT / "database" / "exports" / "stories.json"
 
 PAGES = ["index.html", "stories.html", "facts.html", "solve.html"]
 
-# Filter chips, keyed by the database's new_offense_severity vocabulary.
+# Filter chips, keyed by the database's offender_category vocabulary (set by
+# database/pipeline/categorize.py from the prior record). Rows the sweep
+# hasn't reached yet are "pending".
 CATEGORIES = {
-    "violent": "Violent offense",
-    "property": "Property offense",
-    "drug": "Drug offense",
-    "weapons": "Weapons offense",
-    "other": "Other offense",
+    "violent": "Frequent violent offender",
+    "petty": "Very frequent petty offender",
+    "unclassified": "Record not detailed",
+    "pending": "Not yet categorized",
 }
 
 # release_status vocabulary -> wording on a card. "none stated" shows nothing.
@@ -97,7 +98,7 @@ def to_story(row: dict) -> dict:
         "state": row["state"],
         "date": row["incident_date"],
         "dateLabel": date_label(row["incident_date"]),
-        "category": row["new_offense_severity"] or "other",
+        "category": row.get("offender_category") or "pending",
         "headline": headline(row),
         "summary": row["summary"],
         "priorArrests": row["prior_count_arrests"],

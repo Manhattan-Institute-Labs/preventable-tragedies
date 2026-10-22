@@ -116,9 +116,34 @@ One row per new-offense incident in `data/stories.csv`:
 | `outcome`, `summary` | |
 | `qualifies_strict` | yes/no, from the counts |
 | `source_name`, `source_url`, `additional_sources`, `confidence` | |
+| `offender_category`, `category_reason` | `violent`, `petty`, or `unclassified`, from the prior record (see below); blank until categorized |
 
 `data/offenders.csv` has one row per `offender_key`: name, state, story ids, incident count,
 first and last incident date, max prior counts, strict flag. Never edit it by hand.
+
+## Offender categories
+
+The project tracks frequent violent offenders, very frequent petty offenders, and seriously
+mentally ill offenders. The first two are set by [pipeline/categorize.py](pipeline/categorize.py)
+from the **prior record as the article states it**. The new offense is separate
+(`new_offense_type`), so a petty offender who commits a homicide is `petty` with a violent new
+offense.
+
+| `offender_category` | Rule |
+|---|---|
+| `violent` | two or more violent priors (arrests, charges, or convictions) |
+| `petty` | fewer than two violent priors, and the record is described well enough to see it is mostly low-level |
+| `unclassified` | the article gives counts or labels but not what the priors were, or it's ambiguous |
+
+Violent: homicide, assault and battery, robbery and carjacking, sexual offenses, kidnapping,
+shootings and stabbings, child abuse, threatening with a weapon. Not violent on their own:
+weapons possession, drug offenses, theft, burglary, trespassing, fraud, DUI, resisting arrest,
+probation or parole violations. The model (`CATEGORIZE_MODEL`) re-reads the article and must
+quote the sentence it relied on; a `violent` or `petty` answer whose quote isn't in the article
+(or the stored `prior_evidence_quote`), or a `violent` answer with fewer than two violent priors,
+is stored as `unclassified`. Every decision, with its quote, goes to the decision log. New rows
+are categorized in the daily job; `Categorize (manual)` sweeps the database (`recheck` redoes
+every row, e.g. after a rule change). Serious mental illness is not categorized yet.
 
 ## Caveats
 
@@ -141,6 +166,7 @@ python pipeline/run_daily.py                    # one daily update
 DAYS_BACK=3 MAX_CLASSIFY=200 python pipeline/run_daily.py   # wider net, bounded run
 python pipeline/backfill.py --start 2025-01 --end 2025-06 --max-per-week 150   # or the Backfill workflow in Actions
 python pipeline/build_exports.py               # rebuild exports/ from the CSVs only
+python pipeline/categorize.py                  # categorize rows that have no offender_category
 python pipeline/validate_data.py
 python -m pytest -q                            # offline tests, no API key needed
 ```
