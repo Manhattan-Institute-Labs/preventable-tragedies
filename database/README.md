@@ -1,9 +1,8 @@
 # Frequent-offender database
 
-The Preventable Tragedies case database, carried over from
-[Underincarcerated](https://github.com/CharlesFainLehman/underincarcerated) on 2026-10-22
-(data as of that repo's commit `c08aff9`). That repo is the archive: its commit history is
-the day-by-day audit log up to the move.
+The Preventable Tragedies case database, carried over from the Underincarcerated repo on
+2026-10-22 (data as of its commit `c08aff9`). That repo is now a private archive: its commit
+history is the day-by-day audit log up to the move. Ask the maintainer for access.
 
 A daily-updated database of news stories about repeat offenders: people arrested, charged,
 or convicted for a new crime in the United States who had a documented prior record, or who
