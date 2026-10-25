@@ -1,15 +1,15 @@
-"""Incident- and person-level deduplication.
+"""Incident- and person-level matching, used by incidents.py to group articles.
 
 Adapted from ../database/pipeline/dedupe.py. Several outlets cover one
 incident, and one person recurs across months (an incident, then a
-competency hearing, then a release decision years later). Before adding a
-row, compare it against existing rows for the same subject key (any date) and
-the same state within a date window, and decide which of three things it is:
+competency hearing, then a release decision years later). An article is
+compared against existing incidents for the same subject key (any date) and
+the same state within a date window, and is one of three things:
 
-  same_incident            -> attach the URL to the existing row and fill its
-                              blanks from the new report (merge_into)
-  same_person_new_incident -> new row that shares the existing subject_key
-  unrelated                -> new row
+  same_incident            -> joins that incident: its URL is added and it
+                              fills the incident's blanks (merge_into)
+  same_person_new_incident -> a new incident that shares the subject_key
+  unrelated                -> a new incident
 
 Follow-up coverage of one incident (arrest, competency hearing, plea,
 sentencing, a later release decision) is the same incident. The clear cases
@@ -186,7 +186,7 @@ def merge_into(keep: dict, new_row: dict) -> None:
         keep["subject_key"] = subject_key(keep["subject_name"], keep.get("state"))
     if len(new_row.get("incident_date") or "") > len(keep.get("incident_date") or ""):
         keep["incident_date"] = new_row["incident_date"]   # the more precise date
-    for f in ("fatality", "violence"):
+    for f in ("fatality", "violence", "killed_by_police"):
         if new_row.get(f) == "true":
             keep[f] = "true"
 

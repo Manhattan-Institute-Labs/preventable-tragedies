@@ -1,5 +1,5 @@
-"""Read/write helpers for the review queue, the incidents CSV, the seen-URL
-cache, and subject keys."""
+"""Read/write helpers for the articles and incidents CSVs, the seen-URL cache,
+the harvest windows, and subject keys."""
 
 import csv
 import json
@@ -8,7 +8,8 @@ import unicodedata
 from datetime import date
 from pathlib import Path
 
-from config import CSV_COLUMNS, INCIDENTS_CSV, REVIEW_QUEUE_CSV, SEEN_URLS_JSON, SIGNAL_FIELDS
+from config import (ARTICLE_COLUMNS, ARTICLES_CSV, HARVEST_WINDOWS_JSON, INCIDENT_COLUMNS,
+                    INCIDENTS_CSV, SEEN_URLS_JSON, SIGNAL_FIELDS)
 
 _SUFFIXES = {"jr", "sr", "ii", "iii", "iv", "v"}
 
@@ -28,45 +29,61 @@ def subject_key(name: str | None, state: str | None) -> str:
     return f"{parts[-1]}_{parts[0]}_{(state or '').upper()}"
 
 
-def load_rows(path: Path | None = None) -> list[dict]:
-    path = path or INCIDENTS_CSV
+def load_rows(path: Path) -> list[dict]:
     if not path.exists():
         return []
     with open(path, newline="", encoding="utf-8") as f:
         return list(csv.DictReader(f))
 
 
-def save_rows(rows: list[dict], path: Path | None = None) -> None:
-    path = path or INCIDENTS_CSV
+def save_rows(rows: list[dict], path: Path, columns: list[str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=CSV_COLUMNS, extrasaction="ignore")
+        writer = csv.DictWriter(f, fieldnames=columns, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(rows)
 
 
-def load_queue() -> list[dict]:
-    return load_rows(REVIEW_QUEUE_CSV)
+def load_articles() -> list[dict]:
+    return load_rows(ARTICLES_CSV)
 
 
-def save_queue(rows: list[dict]) -> None:
-    save_rows(rows, REVIEW_QUEUE_CSV)
+def save_articles(rows: list[dict]) -> None:
+    save_rows(rows, ARTICLES_CSV, ARTICLE_COLUMNS)
 
 
-ID_PREFIX = "SMI-"
+def load_incidents() -> list[dict]:
+    return load_rows(INCIDENTS_CSV)
 
 
-def next_id(rows: list[dict]) -> int:
+def save_incidents(rows: list[dict]) -> None:
+    save_rows(rows, INCIDENTS_CSV, INCIDENT_COLUMNS)
+
+
+ARTICLE_PREFIX = "SMI-"
+INCIDENT_PREFIX = "INC-"
+
+
+def next_number(ids, prefix: str) -> int:
     best = 0
-    for r in rows:
-        tail = str(r.get("id", "")).removeprefix(ID_PREFIX)
+    for i in ids:
+        tail = str(i or "").removeprefix(prefix)
         if tail.isdigit():
             best = max(best, int(tail))
     return best + 1
 
 
+def next_id(rows: list[dict]) -> int:
+    """Next article number."""
+    return next_number((r.get("id") for r in rows), ARTICLE_PREFIX)
+
+
 def format_id(n: int) -> str:
-    return f"{ID_PREFIX}{n:06d}"
+    return f"{ARTICLE_PREFIX}{n:06d}"
+
+
+def format_incident_id(n: int) -> str:
+    return f"{INCIDENT_PREFIX}{n:06d}"
 
 
 def load_seen_urls(path: Path | None = None) -> set[str]:
@@ -84,6 +101,17 @@ def save_seen_urls(urls: set[str], path: Path | None = None) -> None:
         json.dump(sorted(urls), f, indent=0)
 
 
+def load_windows() -> list[dict]:
+    if not HARVEST_WINDOWS_JSON.exists():
+        return []
+    return json.loads(HARVEST_WINDOWS_JSON.read_text(encoding="utf-8"))
+
+
+def save_windows(windows: list[dict]) -> None:
+    HARVEST_WINDOWS_JSON.parent.mkdir(parents=True, exist_ok=True)
+    HARVEST_WINDOWS_JSON.write_text(json.dumps(windows, indent=1), encoding="utf-8")
+
+
 def _b(v) -> str:
     return "true" if v else "false"
 
@@ -93,12 +121,14 @@ def _evidence(quotes: dict[str, str]) -> str:
     return " || ".join(f"{f}: {q}" for f, q in quotes.items())
 
 
-def make_row(row_id: int, cls, candidate: dict, coding: dict | None = None) -> dict:
-    """Build a CSV row from a verified classification and its candidate."""
+_UNREVIEWED = {"review_status": "pending", "reviewed_date": "", "excluded_reason": "",
+               "incident_id": ""}
+
+
+def claude_fields(cls, candidate: dict) -> dict:
+    """The coded fields from a verified classification."""
     quotes = {f: cls.signal_quotes[f] for f in SIGNAL_FIELDS if f in cls.signal_quotes}
     return {
-        "id": format_id(row_id),
-        "date_added": date.today().isoformat(),
         "incident_date": cls.incident_date or candidate.get("published", ""),
         "city": cls.city or "",
         "state": cls.state or "",
@@ -111,6 +141,7 @@ def make_row(row_id: int, cls, candidate: dict, coding: dict | None = None) -> d
         "incident_form": cls.incident_form or "",
         "fatality": _b(cls.fatality),
         "violence": _b(cls.violence),
+        "killed_by_police": _b(cls.killed_by_police),
         **{f: _b(f in quotes) for f in SIGNAL_FIELDS},
         "diagnoses": cls.diagnoses or "",
         "days_since_release": "" if cls.days_since_release is None else str(cls.days_since_release),
@@ -121,31 +152,38 @@ def make_row(row_id: int, cls, candidate: dict, coding: dict | None = None) -> d
         "evidence_tier": cls.evidence_tier,
         "outcome": cls.outcome or "",
         "summary": cls.summary or "",
-        "source_name": candidate.get("source", ""),
-        "source_url": candidate["url"],
-        "additional_sources": "",
         "confidence": cls.confidence,
-        "trigger_phrases": " | ".join((coding or {}).get("triggers", [])),
-        "repeat_offender_ids": "",
         "coded_by": "claude",
         "review_note": cls.reason or "",
-        **_PENDING,
     }
 
 
-_PENDING = {"review_status": "pending", "reviewed_date": "", "duplicate_of": ""}
-
-
-def make_candidate_row(row_id: int, coding: dict, candidate: dict) -> dict:
-    """Build a CSV row from the phrase book alone (a --no-llm run). Name, age,
-    and location need the classifier or the reviewer; they are blank here."""
-    quotes = {f: coding["signals"][f] for f in SIGNAL_FIELDS if f in coding["signals"]}
-    notes = []
-    if coding.get("killed_by_police"):
-        notes.append("possible police killing: excluded if confirmed")
+def make_row(row_id: int, cls, candidate: dict, coding: dict | None = None) -> dict:
+    """An article row from a verified classification and its candidate."""
     return {
         "id": format_id(row_id),
         "date_added": date.today().isoformat(),
+        "published": candidate.get("published", ""),
+        "headline": candidate.get("title", ""),
+        **claude_fields(cls, candidate),
+        "source_name": candidate.get("source", ""),
+        "source_url": candidate["url"],
+        "additional_sources": "",
+        "trigger_phrases": " | ".join((coding or {}).get("triggers", [])),
+        "repeat_offender_ids": "",
+        **_UNREVIEWED,
+    }
+
+
+def make_candidate_row(row_id: int, coding: dict, candidate: dict) -> dict:
+    """An article row from the phrase book alone. Name, age, and location need
+    Claude; they are blank here."""
+    quotes = {f: coding["signals"][f] for f in SIGNAL_FIELDS if f in coding["signals"]}
+    return {
+        "id": format_id(row_id),
+        "date_added": date.today().isoformat(),
+        "published": candidate.get("published", ""),
+        "headline": candidate.get("title", ""),
         "incident_date": candidate.get("published", ""),
         "city": "", "state": "", "subject_name": "", "subject_key": "", "age": "", "sex": "",
         "subject_role": coding["subject_role"],
@@ -153,6 +191,7 @@ def make_candidate_row(row_id: int, coding: dict, candidate: dict) -> dict:
         "incident_form": coding["incident_form"],
         "fatality": _b(coding["fatality"]),
         "violence": _b(coding["violence"]),
+        "killed_by_police": _b(coding.get("killed_by_police")),
         **{f: _b(f in quotes) for f in SIGNAL_FIELDS},
         "diagnoses": "; ".join(coding["diagnoses"]),
         "days_since_release": "" if coding["days_since_release"] is None
@@ -169,6 +208,6 @@ def make_candidate_row(row_id: int, coding: dict, candidate: dict) -> dict:
         "trigger_phrases": " | ".join(coding["triggers"]),
         "repeat_offender_ids": "",
         "coded_by": "phrasebook",
-        "review_note": "; ".join(notes),
-        **_PENDING,
+        "review_note": "",
+        **_UNREVIEWED,
     }

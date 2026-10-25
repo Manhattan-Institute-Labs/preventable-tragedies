@@ -20,7 +20,8 @@ Changes from the version that coded the reference set:
     mention a release or discharge.
   - "criminal history" counts as prior_arrests.
   - incident forms use the codebook's labels (config.INCIDENT_FORMS).
-  - other_party is new.
+  - other_party is new, and killed_by_police is recorded as a flag: those
+    incidents are kept for the later criminal-offending restrictions.
 
 A phrase book cannot tell whose history a sentence describes: a victim's
 record or an earlier case can set a field. That is why every match keeps the
@@ -192,6 +193,9 @@ DIAGNOSES = [
 # Incident forms, in the order config.INCIDENT_FORMS lists them (most serious
 # first). Homicide and fatality read text with attempts and threats removed.
 FORMS = [
+    ("fatal police encounter", r"(?:shot and killed|fatally shot|killed) by (?:police|an? (?:police )?"
+                               r"(?:officer|deputy|trooper)|officers|deputies|troopers)|"
+                               r"fatal police (?:shooting|encounter)"),
     ("homicide", r"\bmurder(?:ed|ing|s)?\b|\bkilled\b|\bkilling\b|fatally (?:stabb|shot|beat|struck)|"
                  r"stabbed .{0,30}to death|beaten to death|strangled|homicide|matricide|patricide"),
     ("sexual assault", r"\brape[ds]?\b|sexual(?:ly)? assault"),

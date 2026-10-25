@@ -12,10 +12,16 @@ REPO_ROOT = Path(__file__).resolve().parent.parent  # the smi/ folder
 DATA_DIR = REPO_ROOT / "data"
 REFERENCE_DIR = REPO_ROOT / "reference"
 
-# Every coded article waits in the review queue; only rows a reviewer accepts
-# reach incidents.csv. Rejected rows stay in the queue for tuning.
-REVIEW_QUEUE_CSV = DATA_DIR / "review_queue.csv"
+# Two tables. articles.csv has one row per article: every coded article waits
+# there for review, and a reviewer's accept means only that it is the right
+# general type of story. incidents.csv is built from accepted articles once
+# Claude has coded them: one row per incident, several articles each. The
+# preventable-tragedies criminal-offending restrictions are applied to the
+# incidents after that, not here.
+ARTICLES_CSV = DATA_DIR / "articles.csv"
 INCIDENTS_CSV = DATA_DIR / "incidents.csv"
+# The date windows already harvested, so the next run can continue backwards.
+HARVEST_WINDOWS_JSON = DATA_DIR / "harvest_windows.json"
 SEEN_URLS_JSON = DATA_DIR / "seen_urls.json"
 QUERY_STATS_JSON = DATA_DIR / "query_stats.json"
 DECISIONS_DIR = DATA_DIR / "decisions"   # per-run audit log (gitignored)
@@ -136,11 +142,26 @@ _DIAGNOSIS_TERMS = ['schizophrenia', 'schizophrenic', '"bipolar disorder"',
                     '"psychotic episode"', 'delusional']
 _OTHER_CLINICAL = [t for t in _CLINICAL if t not in _DIAGNOSIS_TERMS]
 
-# Eight GDELT calls in place of the 46 single queries. Grouping slightly
-# broadens three of them: "turned away" no longer needs "emergency room",
-# "pleaded with" becomes "pleaded with doctors", and "hours after being
-# released" needs "mental health" or "psychiatric" rather than "hospital".
-# The last two cover all 110 clinical x incident combinations.
+# A dozen or so GDELT calls in place of the 52 single queries. Grouping
+# slightly broadens three of them: "turned away" no longer needs "emergency
+# room", "pleaded with" becomes "pleaded with doctors", and "hours after
+# being released" needs "mental health" or "psychiatric" rather than
+# "hospital". The grid queries at the end cover all 110 clinical x incident
+# combinations. GDELT rejects a query of about 300 characters as "too long"
+# (203 characters was tested and accepted), so incident terms are packed
+# into groups that keep every query under GDELT_MAX_QUERY_CHARS.
+GDELT_MAX_QUERY_CHARS = 205
+
+
+def _pack(clinical: list[str], terms: list[str]) -> list[str]:
+    """clinical x terms as the fewest grouped queries under the length limit."""
+    queries, group = [], []
+    for t in terms:
+        if group and len(_any(clinical) + " " + _any(group + [t])) > GDELT_MAX_QUERY_CHARS:
+            queries.append(_any(clinical) + " " + _any(group))
+            group = []
+        group.append(t)
+    return queries + [_any(clinical) + " " + _any(group)]
 GDELT_QUERIES = [
     _any(['"released from a psychiatric hospital"', '"discharged from a psychiatric"',
           '"released without follow-up"']),
@@ -155,8 +176,8 @@ GDELT_QUERIES = [
           '"assisted outpatient treatment"', '"Kendra\'s Law"']),
     _any(['"Baker Act"', '"Section 12"', '"crisis intervention team"'])
     + " " + _any(['arrested', 'psychiatric', 'shooting']),
-    _any(_DIAGNOSIS_TERMS) + " " + _any(_INCIDENT),
-    _any(_OTHER_CLINICAL) + " " + _any(_INCIDENT),
+    *_pack(_DIAGNOSIS_TERMS, _INCIDENT),
+    *_pack(_OTHER_CLINICAL, _INCIDENT),
 ]
 
 # Domains and URL fragments that produce noise rather than incident reporting.
@@ -191,12 +212,11 @@ OTHER_PARTIES = [
     "family_other", "partner", "corrections", "healthcare_worker", "multiple",
 ]
 
-# In rough order of seriousness: the phrase book picks the first that matches.
-# People killed by police are excluded from the database, so there is no
-# "fatal police encounter" form.
+# In rough order of seriousness: the phrase book picks the first that matches,
+# so a police killing is checked before the homicide wording it also uses.
 INCIDENT_FORMS = [
-    "homicide", "sexual assault", "shooting", "stabbing", "arson", "vehicular",
-    "police force non-fatal", "assault", "push or shove", "threat or brandishing",
+    "fatal police encounter", "homicide", "sexual assault", "shooting", "stabbing", "arson",
+    "vehicular", "police force non-fatal", "assault", "push or shove", "threat or brandishing",
     "suicide or self-harm", "death by overdose", "death by exposure", "found dead",
     "missing person", "property or trespass", "other",
 ]
@@ -225,21 +245,38 @@ RESPONSIBLE_SYSTEMS = ["hospital", "jail or prison", "court", "police",
 
 EVIDENCE_TIERS = ["T1", "T2", "T3", "T4"]
 
-CSV_COLUMNS = [
-    "id", "date_added", "incident_date", "city", "state",
+# The coded fields an article and an incident share.
+_CODED = [
+    "incident_date", "city", "state",
     "subject_name", "subject_key", "age", "sex",
     "subject_role", "other_party", "incident_form", "fatality", "violence",
+    # Kept, not excluded: the criminal-offending restrictions decide later.
+    "killed_by_police",
     *SIGNAL_FIELDS,
     "diagnoses", "days_since_release",
     "mh_evidence_quote", "signal_evidence",
     "failure_point", "responsible_system", "evidence_tier",
     "outcome", "summary",
+]
+
+ARTICLE_COLUMNS = [
+    "id", "date_added", "published", "headline", *_CODED,
     "source_name", "source_url", "additional_sources",
     "confidence", "trigger_phrases", "repeat_offender_ids",
     "coded_by", "review_note",
-    # Review. duplicate_of names an accepted incident this report describes;
-    # accepting the row merges it into that incident instead of adding one.
-    "review_status", "reviewed_date", "duplicate_of",
+    # Review. accepted = the right general type of story.
+    "review_status", "reviewed_date",
+    # Set when Claude finds an accepted article does not qualify (outside the
+    # US, under 18, not a specific incident): it stays accepted, out of incidents.
+    "excluded_reason",
+    "incident_id",   # the incident this article was grouped into
+]
+
+INCIDENT_COLUMNS = [
+    "id", *_CODED,
+    "source_name", "source_url", "additional_sources",
+    "article_ids", "article_count",
+    "confidence", "repeat_offender_ids",
 ]
 
 REVIEW_STATUSES = ["pending", "flagged", "accepted", "rejected"]

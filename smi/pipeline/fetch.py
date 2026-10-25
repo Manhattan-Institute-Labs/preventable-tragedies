@@ -203,10 +203,11 @@ def google_news_search(query: str, start: datetime | None = None,
     return out
 
 
-def discover(days_back: int = 3, use_gdelt: bool = True) -> tuple[list[dict], datetime]:
-    """All candidates from the last `days_back` days, both sources, deduped by
-    URL. Returns the candidates and the window start."""
-    end = datetime.now(timezone.utc).replace(tzinfo=None)
+def discover(days_back: int = 3, use_gdelt: bool = True,
+             end: datetime | None = None) -> tuple[list[dict], datetime, datetime]:
+    """All candidates from the `days_back` days ending at `end` (default now,
+    UTC), both sources, deduped by URL. Returns the candidates and the window."""
+    end = end or datetime.now(timezone.utc).replace(tzinfo=None)
     start = end - timedelta(days=days_back)
     candidates: dict[str, dict] = {}
     t0 = time.monotonic()
@@ -226,7 +227,7 @@ def discover(days_back: int = 3, use_gdelt: bool = True) -> tuple[list[dict], da
         print(f"  GDELT calls {GDELT_STATS['calls']}, retries {GDELT_STATS['retries']}, "
               f"gave up {GDELT_STATS['gave_up']}")
     print(f"  discovery took {int(time.monotonic() - t0)}s")
-    return list(candidates.values()), start
+    return list(candidates.values()), start, end
 
 
 def save_query_stats() -> None:

@@ -7,10 +7,12 @@ words in the headline: headlines rarely carry them, and a headline-only rule
 rejected real cases ("Man stabbed his scientist wife... as his mother
 'begged' him to stop"). Those judgments are made on the full text.
 
-The US test that matters is where the incident happened, which only the
-classifier can read; a UK outlet often covers a US incident. So the outlet
-rule here is narrow: domains on a foreign country code, and a short list of
-foreign local outlets that Google News reports by name.
+Non-US links are excluded: a URL on any two-letter country-code domain
+other than .us (.uk, .au, .ca, .gr and so on; a few codes US outlets use as
+generic names, such as .io and .tv, are allowed), and a short list of
+foreign outlets that Google News reports by name. A Google News link only shows its real domain after it is
+decoded, so process.py runs is_foreign_outlet again then. The classifier
+still rejects a non-US incident reported by a US outlet.
 """
 
 import re
@@ -30,8 +32,15 @@ GENRE_EXCLUDE = re.compile(
     r"how to (?:help|cope|talk)|tips for|awareness (?:month|week|day)|"
     r"obituary|wedding|horoscope|recipe|box score)\b", re.I)
 
-FOREIGN_TLDS = (".uk", ".ie", ".au", ".nz", ".ca", ".in", ".za", ".sg", ".ph", ".pk",
-                ".ng", ".ke", ".my", ".hk")
+# Every two-letter country-code domain except .us is foreign, apart from the
+# few that US outlets use as generic names.
+US_USED_CCTLDS = {"us", "io", "tv", "co", "me", "ly", "fm", "ai", "am"}
+
+
+def _foreign_domain(host: str) -> bool:
+    host = host.split(":")[0].rstrip(".")
+    tld = host.rsplit(".", 1)[-1] if "." in host else ""
+    return len(tld) == 2 and tld.isalpha() and tld not in US_USED_CCTLDS
 
 # Foreign local outlets as Google News names them. National outlets that cover
 # US news heavily (Daily Mail, The Independent, The Guardian) are not here.
@@ -42,6 +51,9 @@ FOREIGN_OUTLETS = {
     "manchester evening news", "wales online", "walesonline", "the scotsman", "the herald",
     "liverpool echo", "birmingham live", "the times of india", "hindustan times",
     "the news minute", "ndtv",
+    # Foreign outlets on .com/.net/.tv domains, seen in the first harvests.
+    "yorkshire live", "stv news", "news24", "the business standard", "starts at 60",
+    "the nightly", "leadership newspapers", "irish mirror",
 }
 
 
@@ -52,18 +64,21 @@ def _host(url: str) -> str:
 def is_foreign_outlet(candidate: dict) -> bool:
     host = _host(candidate.get("url", ""))
     source = (candidate.get("source") or "").strip().lower()
-    if host and "news.google.com" not in host and host.endswith(FOREIGN_TLDS):
+    if host and "news.google.com" not in host and _foreign_domain(host):
         return True
-    if source.endswith(FOREIGN_TLDS):   # GDELT reports the domain as the source
+    if " " not in source and _foreign_domain(source):   # GDELT reports the domain as the source
         return True
     return source in FOREIGN_OUTLETS
 
 
-def prefilter(candidate: dict, window_start: datetime | None = None) -> str | None:
+def prefilter(candidate: dict, window_start: datetime | None = None,
+              window_end: datetime | None = None) -> str | None:
     """A rejection reason, or None to keep the candidate."""
     published = candidate.get("published") or ""
     if window_start and published and published < window_start.strftime("%Y-%m-%d"):
         return "published before the search window"
+    if window_end and published and published > window_end.strftime("%Y-%m-%d"):
+        return "published after the search window"
     if is_foreign_outlet(candidate):
         return "foreign outlet"
     title = re.sub(r"\s+-\s+[^-]+$", "", candidate.get("title") or "")  # drop " - Outlet"

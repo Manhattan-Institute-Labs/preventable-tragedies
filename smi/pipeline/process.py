@@ -1,22 +1,24 @@
-"""Shared candidate-processing loop.
+"""Harvest articles, and code them with Claude.
 
-Adapted from ../database/pipeline/process.py. Order per candidate:
-  seen-URL check -> free headline check (prefilter.py) -> triage (batched,
-  headline only, Claude) -> Google redirect resolve -> wire/blotter filter ->
-  same-article URL check -> fetch (cached) -> phrase book -> classify ->
-  evidence-quote check -> dedupe -> append.
+Adapted from ../database/pipeline/process.py.
 
-Nothing goes straight into incidents.csv. Every coded article is appended to
-the review queue (data/review_queue.csv) as pending, and only a reviewer's
-accept moves it into incidents.csv (review.py). With no model (a --no-llm
-run) the loop stops after the phrase book. That mode never touches
-seen_urls.json, so a later classified run still reads every article, and a
-classified row replaces a still-pending phrase-book row for the same URL.
+harvest_articles, per candidate:
+  seen-URL check -> headline check (prefilter.py) -> triage (Claude, only
+  with an API key) -> Google redirect resolve -> non-US domain check ->
+  wire/blotter filter -> same-article URL check -> fetch (cached) -> phrase
+  book -> append to articles.csv as pending.
+Every article is its own row: several reports of one incident all come in,
+and incidents.py groups them later.
+
+classify_articles: Claude re-reads every phrase-book article not rejected in
+review (pending, flagged, or accepted) and replaces the phrase-book coding
+with its own, verified against the article text. An article Claude finds does
+not qualify (outside the US, under 18, not a specific incident) keeps its
+review status and gets excluded_reason, which keeps it out of incidents.
 
 Triage runs before URL resolution on purpose: decoding a Google News redirect
-costs about a second of HTTP per URL. Network-bound work runs in thread
-pools; dedupe and append are serial because each depends on the rows added
-before it. Every decision goes to a JSONL log in data/decisions/.
+costs about a second of HTTP per URL. Every decision goes to a JSONL log in
+data/decisions/.
 """
 
 import json
@@ -31,10 +33,9 @@ import anthropic
 import smi_coding
 from classify import check_evidence, classify_article, hedge_summary
 from config import DECISIONS_DIR
-from dedupe import ages_consistent, check_duplicate, merge_into
 from fetch import fetch_article_text_cached, is_vendor_or_wire, resolve_candidate
-from prefilter import prefilter
-from store import make_candidate_row, make_row, next_id
+from prefilter import is_foreign_outlet, prefilter
+from store import claude_fields, make_candidate_row, next_id
 from triage import triage_candidates
 
 _VARIANT_SEGMENTS = ("/gallery/", "/newsletter/gallery/", "/newsletter/", "/amp/", "/photos/")
@@ -114,15 +115,15 @@ class ResolutionThrottled(RuntimeError):
 
 
 def _new_counts() -> dict:
-    return {"new": 0, "duplicates": 0, "same_person": 0, "prefiltered": 0, "triaged_out": 0,
-            "rejected": 0, "no_text": 0, "no_mh": 0, "unresolved": 0, "skipped_seen": 0,
-            "errors": 0, "signals_dropped": 0}
+    return {"new": 0, "duplicates": 0, "prefiltered": 0, "foreign": 0, "triaged_out": 0,
+            "rejected": 0, "no_text": 0, "no_mh": 0, "no_event": 0, "unresolved": 0,
+            "skipped_seen": 0, "errors": 0, "coded": 0, "excluded": 0, "signals_dropped": 0}
 
 
 def select_candidates(client: anthropic.Anthropic | None, candidates: list[dict],
                       seen_urls: set[str], stored_urls: set[str], stored_paths: set[str],
-                      window_start: datetime | None, log: DecisionLog, counts: dict,
-                      max_fetch: int = 0) -> list[dict]:
+                      window_start: datetime | None, window_end: datetime | None,
+                      log: DecisionLog, counts: dict, max_fetch: int = 0) -> list[dict]:
     """Everything before the article fetch. Returns the candidates to fetch,
     with Google redirects resolved. Mutates seen_urls and counts."""
     fresh = []
@@ -130,7 +131,7 @@ def select_candidates(client: anthropic.Anthropic | None, candidates: list[dict]
         if c["url"] in seen_urls:
             counts["skipped_seen"] += 1
             continue
-        reason = prefilter(c, window_start)
+        reason = prefilter(c, window_start, window_end)
         if reason:
             log.write(stage="prefilter", url=c["url"], title=c.get("title"), reason=reason)
             _mark_seen(seen_urls, c)
@@ -195,6 +196,11 @@ def select_candidates(client: anthropic.Anthropic | None, candidates: list[dict]
                 counts["unresolved"] += 1  # not marked seen: retried next run
                 log.write(stage="unresolved", url=url, title=c.get("title"))
             continue
+        if is_foreign_outlet(c):     # the decoded link is on a non-US domain
+            log.write(stage="prefilter", url=url, title=c.get("title"), reason="non-US domain")
+            _mark_seen(seen_urls, c)
+            counts["foreign"] += 1
+            continue
         if is_vendor_or_wire(url):
             _mark_seen(seen_urls, c)
             counts["rejected"] += 1
@@ -232,189 +238,122 @@ def _fetch_and_code(candidate: dict) -> dict:
         return {"error": e}
 
 
-def _fetch_code_classify(client, candidate: dict) -> dict:
-    res = _fetch_and_code(candidate)
-    if "text" not in res or not res["coding"]["has_mh"]:
-        return res   # no text, an error, or no mental-health language: no model call
+def harvest_articles(client: anthropic.Anthropic | None, candidates: list[dict],
+                     articles: list[dict], seen_urls: set[str],
+                     window_start: datetime | None = None, window_end: datetime | None = None,
+                     decision_log: Path | None = None, max_fetch: int = 0,
+                     checkpoint=None) -> dict:
+    """Fetch and phrase-book-code new candidates, appending each article that
+    has mental-health language and an event to articles as pending. With a
+    client, headlines are triaged by Claude first. Mutates articles and
+    seen_urls. Articles with no fetchable text are not marked seen, so they
+    are retried."""
+    counts = _new_counts()
+    log = DecisionLog(decision_log)
+    stored_urls, stored_paths = _stored(articles)
+    to_fetch = select_candidates(client, candidates, seen_urls, stored_urls, stored_paths,
+                                 window_start, window_end, log, counts, max_fetch)
+    print(f"Fetching and coding {len(to_fetch)} with {FETCH_WORKERS} workers\n")
+    row_id = next_id(articles)
+    with ThreadPoolExecutor(max_workers=FETCH_WORKERS) as pool:
+        for start in range(0, len(to_fetch), CHECKPOINT_EVERY):
+            chunk = to_fetch[start:start + CHECKPOINT_EVERY]
+            for c, res in zip(chunk, pool.map(_fetch_and_code, chunk)):
+                if "error" in res:
+                    counts["errors"] += 1
+                    continue
+                if res.get("no_text"):
+                    counts["no_text"] += 1
+                    log.write(stage="fetch", url=c["url"], result="no_text")
+                    continue
+                _mark_seen(seen_urls, c)
+                coding = res["coding"]
+                if not coding["has_mh"] or not coding["has_event"]:
+                    key = "no_mh" if not coding["has_mh"] else "no_event"
+                    counts[key] += 1
+                    log.write(stage="phrasebook", url=c["url"], qualifies=False, reason=key)
+                    continue
+                articles.append(make_candidate_row(row_id, coding, c))
+                log.write(stage="phrasebook", url=c["url"], qualifies=True, id=articles[-1]["id"])
+                row_id += 1
+                counts["new"] += 1
+            if checkpoint:
+                checkpoint()
+    return counts
+
+
+def _as_candidate(a: dict) -> dict:
+    return {"url": a["source_url"], "title": a.get("headline") or a.get("summary", ""),
+            "source": a.get("source_name", ""),
+            "published": a.get("published") or a.get("incident_date", "")}
+
+
+def _code_with_claude(client, a: dict) -> dict:
+    c = _as_candidate(a)
+    res = _fetch_and_code(c)
+    if "text" not in res:
+        return res
+    if not res["coding"]["has_mh"]:
+        return {**res, "reason": "no mental-health language in article"}
     try:
-        res["cls"] = classify_article(client, candidate, res["text"], res["coding"])
+        res["cls"] = classify_article(client, c, res["text"], res["coding"])
     except Exception as e:  # noqa: BLE001
         return {"error": e}
     return res
 
 
-def _open_rows(queue: list[dict]) -> list[dict]:
-    """Classified queue rows not yet decided: what a new report may merge into."""
-    return [r for r in queue if r.get("coded_by") == "claude"
-            and r.get("review_status") in ("pending", "flagged")]
-
-
-def code_candidates(candidates: list[dict], queue: list[dict], incidents: list[dict],
-                    window_start: datetime | None = None,
-                    decision_log: Path | None = None, max_fetch: int = 0) -> dict:
-    """The --no-llm path: phrase-book coding only, appended to the review
-    queue as pending. URLs already in the queue or in incidents are skipped;
-    seen_urls.json is not used."""
+def classify_articles(client: anthropic.Anthropic, articles: list[dict],
+                      decision_log: Path | None = None, checkpoint=None, limit: int = 0) -> dict:
+    """Claude re-codes every phrase-book article not rejected in review.
+    Mutates articles in place; review status is never changed."""
     counts = _new_counts()
     log = DecisionLog(decision_log)
-    have = {r["source_url"] for r in queue + incidents if r.get("source_url")}
-    stored_urls, stored_paths = _stored(queue + incidents)
-    to_fetch = select_candidates(None, candidates, set(have), stored_urls, stored_paths,
-                                 window_start, log, counts, max_fetch)
-    print(f"Fetching and coding {len(to_fetch)} with {FETCH_WORKERS} workers\n")
-    row_id = next_id(queue + incidents)
+    todo = [a for a in articles
+            if a.get("coded_by") == "phrasebook" and a.get("review_status") != "rejected"]
+    if limit:
+        todo = todo[:limit]
+    print(f"Classifying {len(todo)} phrase-book articles with Claude\n")
     with ThreadPoolExecutor(max_workers=FETCH_WORKERS) as pool:
-        results = list(pool.map(_fetch_and_code, to_fetch))
-    for c, res in zip(to_fetch, results):
-        if "error" in res:
-            counts["errors"] += 1
-            continue
-        if res.get("no_text"):
-            counts["no_text"] += 1
-            log.write(stage="fetch", url=c["url"], result="no_text")
-            continue
-        coding = res["coding"]
-        if not coding["has_mh"] or not coding["has_event"]:
-            reason = "no mental-health language" if not coding["has_mh"] else "no specific event"
-            counts["no_mh" if not coding["has_mh"] else "rejected"] += 1
-            log.write(stage="phrasebook", url=c["url"], qualifies=False, reason=reason)
-            continue
-        queue.append(make_candidate_row(row_id, coding, c))
-        log.write(stage="phrasebook", url=c["url"], qualifies=True, id=queue[-1]["id"])
-        row_id += 1
-        counts["new"] += 1
-    return counts
-
-
-def process_candidates(client: anthropic.Anthropic, candidates: list[dict],
-                       queue: list[dict], incidents: list[dict], seen_urls: set[str],
-                       window_start: datetime | None = None,
-                       decision_log: Path | None = None, checkpoint=None,
-                       max_classify: int = 0) -> dict:
-    """Classify candidates and queue qualifying rows for review. Mutates queue
-    and seen_urls in place; incidents is only read. Returns counts."""
-    counts = _new_counts()
-    log = DecisionLog(decision_log)
-    # A still-pending phrase-book row is re-read: the classified row replaces it.
-    phrasebook = {r["source_url"]: r for r in queue
-                  if r.get("coded_by") == "phrasebook" and r.get("review_status") == "pending"}
-    stored_urls, stored_paths = _stored(incidents + [r for r in queue
-                                                     if r["source_url"] not in phrasebook])
-    to_fetch = select_candidates(client, candidates, seen_urls, stored_urls, stored_paths,
-                                 window_start, log, counts, max_classify)
-    print(f"Fetching and classifying {len(to_fetch)} with {FETCH_WORKERS} workers\n")
-
-    def retire(pb_row: dict | None, note: str) -> None:
-        """Close a phrase-book row the classifier has now decided."""
-        if pb_row:
-            pb_row["review_status"] = "rejected"
-            pb_row["review_note"] = note
-
-    done = 0
-    t0 = time.monotonic()
-    with ThreadPoolExecutor(max_workers=FETCH_WORKERS) as pool:
-        for start in range(0, len(to_fetch), CHECKPOINT_EVERY):
-            chunk = to_fetch[start:start + CHECKPOINT_EVERY]
-            results = list(pool.map(lambda c: _fetch_code_classify(client, c), chunk))
-            for c, res in zip(chunk, results):
-                done += 1
-                url = c["url"]
-                pb_row = phrasebook.get(url)
-                print(f"[{done}/{len(to_fetch)}] {c['title'][:90]}")
+        for start in range(0, len(todo), CHECKPOINT_EVERY):
+            chunk = todo[start:start + CHECKPOINT_EVERY]
+            for a, res in zip(chunk, pool.map(lambda a: _code_with_claude(client, a), chunk)):
                 if "error" in res:
-                    print(f"  error, skipping (will retry next run): {res['error']}")
+                    print(f"  {a['id']} error (retried next run): {res['error']}")
                     counts["errors"] += 1
-                    continue   # never marked seen on errors
-                _mark_seen(seen_urls, c)
-                if res.get("no_text"):
-                    counts["no_text"] += 1
-                    log.write(stage="fetch", url=url, result="no_text")
-                    print("  no article text; skipping")
                     continue
-                coding = res["coding"]
+                if res.get("no_text"):
+                    counts["no_text"] += 1   # left as phrase-book; retried next run
+                    continue
+                a["coded_by"] = "claude"
                 if "cls" not in res:
-                    counts["no_mh"] += 1
-                    log.write(stage="phrasebook", url=url, qualifies=False,
-                              reason="no mental-health language in article")
-                    print("  no mental-health language; skipping")
+                    a["excluded_reason"] = res["reason"]
+                    counts["excluded"] += 1
                     continue
                 cls, text = res["cls"], res["text"]
-                if not cls.qualifies:
-                    log.write(stage="classify", url=url, qualifies=False, reason=cls.reason,
-                              killed_by_police=cls.killed_by_police)
-                    print(f"  rejected: {cls.reason[:100]}")
-                    retire(pb_row, f"classifier rejected: {cls.reason}")
-                    counts["rejected"] += 1
-                    continue
-                problem, dropped = check_evidence(cls, text)
+                problem = None if cls.qualifies else f"does not qualify: {cls.reason}"
+                dropped = []
+                if not problem:
+                    problem, dropped = check_evidence(cls, text)
                 if problem:
-                    log.write(stage="verify", url=url, qualifies=False, reason=problem,
-                              classification=cls.model_dump())
-                    print(f"  rejected on verification: {problem}")
-                    retire(pb_row, f"classifier rejected on verification: {problem}")
-                    counts["rejected"] += 1
+                    a["excluded_reason"] = problem
+                    a["review_note"] = cls.reason or ""
+                    log.write(stage="classify", id=a["id"], url=a["source_url"], qualifies=False,
+                              reason=problem, classification=cls.model_dump())
+                    print(f"  {a['id']} excluded: {problem[:100]}")
+                    counts["excluded"] += 1
                     continue
                 if dropped:
-                    log.write(stage="verify", url=url, dropped=dropped)
+                    log.write(stage="verify", id=a["id"], dropped=dropped)
                     counts["signals_dropped"] += len(dropped)
                 if cls.incident_date and cls.incident_date[:10] > _date_horizon():
-                    cls.incident_date = None   # a misread date, not a reason to drop the story
-                hedged = hedge_summary(cls.summary or "", cls.outcome or "", c.get("source") or "")
-                if hedged != cls.summary:
-                    log.write(stage="hedge", url=url, before=cls.summary, after=hedged)
-                    cls.summary = hedged
-
-                row_id = int(pb_row["id"].removeprefix("SMI-")) if pb_row else next_id(queue + incidents)
-                row = make_row(row_id, cls, c, coding)
-                log.write(stage="classify", url=url, qualifies=True, row=row)
-                pool_rows = incidents + _open_rows(queue)
-                try:
-                    dup = check_duplicate(client, row, pool_rows)
-                except anthropic.APIError as e:
-                    print(f"  dedupe call failed ({e}); treating as new")
-                    dup = None
-                match = next((r for r in pool_rows if dup and r["id"] == dup.matching_id), None)
-                stored_urls.add(canonical_url(url))
-                if path := syndication_path(url):
-                    stored_paths.add(path)
-
-                if dup and dup.relation == "same_incident" and match is not None:
-                    log.write(stage="dedupe", url=url, relation="same_incident", matching_id=match["id"])
-                    counts["duplicates"] += 1
-                    if not any(match is r for r in incidents):
-                        # Both reports are still unreviewed: fold this one in.
-                        merge_into(match, row)
-                        retire(pb_row, f"merged into {match['id']} (same incident)")
-                        print(f"  same incident as {match['id']} (in review); merged")
-                        continue
-                    # The incident is already accepted: queue this report so
-                    # the reviewer decides; accepting it merges it in.
-                    row["duplicate_of"] = match["id"]
-                    row["review_note"] = (f"Same incident as {match['id']}, already accepted: "
-                                          f"accepting merges this report into it. {row['review_note']}")
-                    print(f"  same incident as accepted {match['id']}; queued to merge")
-
-                elif dup and dup.relation == "same_person_new_incident" and match is not None:
-                    if ages_consistent(row, match):
-                        if match.get("subject_key"):
-                            row["subject_key"] = match["subject_key"]
-                        log.write(stage="dedupe", url=url, relation="same_person_new_incident",
-                                  matching_id=match["id"])
-                        print(f"  same person as {match['id']}, new incident")
-                        counts["same_person"] += 1
-                    else:
-                        log.write(stage="dedupe", url=url, relation="unrelated",
-                                  matching_id=match["id"], reason="ages inconsistent")
-
-                if pb_row:
-                    queue[queue.index(pb_row)] = row   # same id, now classified
-                else:
-                    queue.append(row)
-                print(f"  QUEUED: {row['subject_name'] or '(unnamed)'} | {row['city']}, "
-                      f"{row['state']} | {row['subject_role']} | {row['incident_form']}")
-                counts["new"] += 1
+                    cls.incident_date = None   # a misread date
+                cls.summary = hedge_summary(cls.summary or "", cls.outcome or "", a.get("source_name") or "")
+                a.update(claude_fields(cls, _as_candidate(a)))
+                a["excluded_reason"] = ""
+                log.write(stage="classify", id=a["id"], url=a["source_url"], qualifies=True)
+                print(f"  {a['id']} coded: {a['subject_name'] or '(unnamed)'} | {a['city']}, "
+                      f"{a['state']} | {a['subject_role']} | {a['incident_form']}")
+                counts["coded"] += 1
             if checkpoint:
                 checkpoint()
-    if to_fetch:
-        print(f"\nClassified {len(to_fetch)} in {int(time.monotonic() - t0)}s")
     return counts

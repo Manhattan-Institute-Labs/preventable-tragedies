@@ -3,27 +3,27 @@
   "\"Baker Act\" arrested": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 8
+   "gnews": 10
   },
   "\"Section 12\" psychiatric": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 2
+   "gnews": 1
   },
   "\"assisted outpatient treatment\" OR \"Kendra's Law\"": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 3
+   "gnews": 4
   },
   "\"bipolar disorder\" \"shot by police\"": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 1
+   "gnews": 3
   },
   "\"bipolar disorder\" arraigned": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 4
+   "gnews": 8
   },
   "\"bipolar disorder\" stabbed": {
    "gdelt": 0,
@@ -33,12 +33,12 @@
   "\"competency restoration\"": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 10
+   "gnews": 9
   },
   "\"crisis intervention team\" shooting": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 10
+   "gnews": 7
   },
   "\"denied a bed\" psychiatric": {
    "gdelt": 0,
@@ -53,22 +53,22 @@
   "\"emotionally disturbed person\"": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 6
+   "gnews": 8
   },
   "\"emotionally disturbed\" \"shot by police\"": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 0
+   "gnews": 2
   },
   "\"emotionally disturbed\" stabbed": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 2
+   "gnews": 6
   },
   "\"emotionally disturbed\" stabbing": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 2
+   "gnews": 6
   },
   "\"family begged\" \"mental illness\"": {
    "gdelt": 0,
@@ -78,22 +78,22 @@
   "\"history of mental illness\" \"charged with murder\"": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 5
+   "gnews": 2
   },
   "\"history of mental illness\" arraigned": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 29
+   "gnews": 16
   },
   "\"history of mental illness\" standoff": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 3
+   "gnews": 2
   },
   "\"hours after being released\" hospital": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 7
+   "gnews": 5
   },
   "\"involuntary commitment\"": {
    "gdelt": 0,
@@ -103,7 +103,7 @@
   "\"mental health issues\" \"charged with murder\"": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 12
+   "gnews": 9
   },
   "\"mental health issues\" \"wellness check\"": {
    "gdelt": 0,
@@ -113,7 +113,7 @@
   "\"mental health issues\" attack": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 49
+   "gnews": 39
   },
   "\"mother begged\" hospital \"mental\"": {
    "gdelt": 0,
@@ -128,7 +128,7 @@
   "\"off her medication\" arraigned": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 6
+   "gnews": 5
   },
   "\"off her medication\" standoff": {
    "gdelt": 0,
@@ -138,22 +138,22 @@
   "\"off his medication\" \"unfit to stand trial\"": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 1
+   "gnews": 0
   },
   "\"off his medication\" stabbed": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 1
+   "gnews": 0
   },
   "\"off his medication\" stabbing": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 1
+   "gnews": 0
   },
   "\"person experiencing an emotional crisis\"": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 0
+   "gnews": 1
   },
   "\"pleaded with\" doctors \"mental illness\"": {
    "gdelt": 0,
@@ -163,27 +163,27 @@
   "\"psychotic episode\" \"charged with murder\"": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 4
+   "gnews": 0
   },
   "\"psychotic episode\" attack": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 18
+   "gnews": 6
   },
   "\"psychotic episode\" standoff": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 1
+   "gnews": 0
   },
   "\"released from a psychiatric hospital\"": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 6
+   "gnews": 7
   },
   "\"released from the hospital\" \"mental health\"": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 4
+   "gnews": 47
   },
   "\"released without follow-up\"": {
    "gdelt": 0,
@@ -193,12 +193,12 @@
   "\"repeatedly called for help\" \"mental health\"": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 2
+   "gnews": 0
   },
   "\"treated and released\" psychiatric": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 2
+   "gnews": 3
   },
   "\"tried to get him committed\"": {
    "gdelt": 0,
@@ -208,20 +208,25 @@
   "\"turned away\" \"emergency room\" \"mental health\"": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 1
+   "gnews": 6
   },
   "\"we tried to get him help\"": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 1
+  },
+  "(\"family begged\" OR \"mother begged\" OR \"repeatedly called for help\" OR \"pleaded with doctors\") (\"mental illness\" OR \"mental health\")": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 0
+  },
+  "(\"released from a psychiatric hospital\" OR \"discharged from a psychiatric\" OR \"released without follow-up\")": {
    "gdelt": 0,
    "gdelt_capped": false,
    "gnews": 0
   },
   "(\"released from the hospital\" OR \"treated and released\" OR \"denied a bed\" OR \"hours after being released\" OR \"turned away\") (\"mental health\" OR psychiatric)": {
-   "gdelt": 64,
-   "gdelt_capped": false,
-   "gnews": 0
-  },
-  "(\"tried to get him committed\" OR \"we tried to get him help\")": {
-   "gdelt": 0,
+   "gdelt": 24,
    "gdelt_capped": false,
    "gnews": 0
   },
@@ -233,7 +238,7 @@
   "delusional \"mental health evaluation\"": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 1
+   "gnews": 0
   },
   "delusional \"wellness check\"": {
    "gdelt": 0,
@@ -243,27 +248,27 @@
   "schizophrenia \"mental health evaluation\"": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 7
+   "gnews": 6
   },
   "schizophrenia \"wellness check\"": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 0
+   "gnews": 1
   },
   "schizophrenia attack": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 19
+   "gnews": 10
   },
   "schizophrenic \"competency evaluation\"": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 0
+   "gnews": 2
   },
   "schizophrenic \"unfit to stand trial\"": {
    "gdelt": 0,
    "gdelt_capped": false,
-   "gnews": 9
+   "gnews": 8
   },
   "schizophrenic stabbing": {
    "gdelt": 0,

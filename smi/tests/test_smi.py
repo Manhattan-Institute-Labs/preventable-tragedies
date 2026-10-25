@@ -8,14 +8,15 @@ from datetime import datetime
 import pytest
 
 import config
+import incidents
 import process
 import review
 import smi_coding
 from classify import IncidentClassification, check_evidence, days_in_text, parse_classification
 from dedupe import DedupeResult, merge_into, obvious_same_incident
 from link import link_repeat_offenders
-from prefilter import prefilter
-from store import make_candidate_row, make_row, subject_key
+from prefilter import is_foreign_outlet, prefilter
+from store import claude_fields, make_candidate_row, make_row, subject_key
 
 ARTICLE = (
     "CAMBRIDGE, Mass. - A Boston man accused of opening fire on passing cars had been "
@@ -44,22 +45,39 @@ def test_grid_is_balanced_across_clinical_terms():
 
 def test_query_counts_and_gdelt_syntax():
     assert len(config.GOOGLE_NEWS_QUERIES) == 52
-    assert len(config.GDELT_QUERIES) == 8
+    assert len(config.GDELT_QUERIES) == 12
     for q in config.GDELT_QUERIES:
+        assert len(q) <= config.GDELT_MAX_QUERY_CHARS, (len(q), q)   # GDELT: "too long"
         assert q.count("(") == q.count(")"), q
         assert q.count('"') % 2 == 0, q
         if " OR " in q:
             assert q.startswith("("), q   # GDELT needs ORs inside parentheses
 
 
+def test_gdelt_grid_covers_every_combination():
+    pairs = set()
+    for q in config.GDELT_QUERIES:
+        if ") (" not in q:
+            continue
+        left, right = q.split(") (", 1)
+        clinical = left.strip("(").split(" OR ")
+        incident = right.strip(")").split(" OR ")
+        pairs |= {(c, i) for c in clinical for i in incident}
+    expected = {(c, i) for c in config._CLINICAL for i in config._INCIDENT}
+    assert expected <= pairs
+
+
 def test_codebook_shape():
     assert config.SUBJECT_ROLES == ["subject_accused", "subject_victim"]
     assert "prior_hospitalization" not in config.SIGNAL_FIELDS
-    assert "victim_smi_status" not in config.CSV_COLUMNS
-    assert "fatal police encounter" not in config.INCIDENT_FORMS
+    assert "victim_smi_status" not in config.ARTICLE_COLUMNS
+    assert "fatal police encounter" in config.INCIDENT_FORMS   # kept, flagged
     assert "acquaintance" in config.OTHER_PARTIES
-    assert {"review_status", "reviewed_date", "duplicate_of"} <= set(config.CSV_COLUMNS)
-    assert len(set(config.CSV_COLUMNS)) == len(config.CSV_COLUMNS)
+    for cols in (config.ARTICLE_COLUMNS, config.INCIDENT_COLUMNS):
+        assert len(set(cols)) == len(cols)
+        assert "killed_by_police" in cols
+    assert {"review_status", "excluded_reason", "incident_id", "headline"} <= set(config.ARTICLE_COLUMNS)
+    assert {"article_ids", "article_count"} <= set(config.INCIDENT_COLUMNS)
 
 
 # --- phrase book ------------------------------------------------------------
@@ -124,10 +142,11 @@ def test_shot_by_police_is_not_the_subjects_victim():
     assert r["killed_by_police"] is False
 
 
-def test_subject_victim_and_killed_by_police():
-    r = smi_coding.code("A homeless man with schizophrenia froze to death outside the shelter.")
-    assert r["subject_role"] == "subject_victim"
-    assert smi_coding.code("The man was fatally shot by police after the standoff.")["killed_by_police"]
+def test_police_killings_are_recorded_not_dropped():
+    r = smi_coding.code("The man, who had schizophrenia, was fatally shot by police after the standoff.")
+    assert r["killed_by_police"] and r["incident_form"] == "fatal police encounter"
+    assert smi_coding.code("A homeless man with schizophrenia froze to death outside the shelter."
+                           )["subject_role"] == "subject_victim"
 
 
 def test_days_since_release_needs_a_release_sentence():
@@ -136,25 +155,40 @@ def test_days_since_release_needs_a_release_sentence():
     assert smi_coding.code("He was released within hours of arriving.")["days_since_release"] == 0
 
 
-# --- headline check ---------------------------------------------------------
+# --- headline and domain checks ---------------------------------------------
 
 def test_prefilter():
-    start = datetime(2026, 10, 1)
+    start, end = datetime(2026, 10, 1), datetime(2026, 10, 14)
     ok = {"title": "Mother shares story of son's arrest - WXYZ", "url": "https://wxyz.com/a",
           "source": "WXYZ", "published": "2026-10-10"}
-    assert prefilter(ok, start) is None
-    assert prefilter({**ok, "title": "Opinion: Fix the mental health system"}, start)
-    assert prefilter({**ok, "title": "Lawmakers weigh involuntary commitment bill"}, start)
-    # Genres seen in the first live run.
+    assert prefilter(ok, start, end) is None
+    assert prefilter({**ok, "title": "Opinion: Fix the mental health system"}, start, end)
+    assert prefilter({**ok, "title": "Lawmakers weigh involuntary commitment bill"}, start, end)
     for title in ("Calls to service week of 10/20/2026-10/22/2026 - Panola Watchman",
                   "Pa Senators advance legislation to create online registry - WGAL",
                   "Systematic review and meta-analysis of CBT for insomnia - Nature"):
-        assert prefilter({**ok, "title": title}, start), title
-    assert prefilter({**ok, "published": "2019-01-01"}, start) == "published before the search window"
-    assert prefilter({**ok, "source": "Manchester Evening News"}, start) == "foreign outlet"
-    assert prefilter({**ok, "url": "https://www.example.co.uk/x"}, start) == "foreign outlet"
-    # A UK national outlet often covers US incidents: left for the classifier.
-    assert prefilter({**ok, "source": "Daily Mail"}, start) is None
+        assert prefilter({**ok, "title": title}, start, end), title
+    assert prefilter({**ok, "published": "2019-01-01"}, start, end) == "published before the search window"
+    assert prefilter({**ok, "published": "2026-10-20"}, start, end) == "published after the search window"
+    assert prefilter({**ok, "source": "Manchester Evening News"}, start, end) == "foreign outlet"
+    assert prefilter({**ok, "url": "https://www.example.co.uk/x"}, start, end) == "foreign outlet"
+    assert prefilter({**ok, "source": "Daily Mail"}, start, end) is None
+
+
+@pytest.mark.parametrize("url,foreign", [
+    ("https://www.examinerlive.co.uk/news/tiger-attack", True),
+    ("https://thenightly.com.au/news/attack", True),
+    ("https://leadership.ng/kano-court", True),
+    ("https://www.cbc.ca/news/canada/x", True),
+    ("https://www.ekathimerini.gr/news/x", True),
+    ("https://www.example.com:443/x", False),
+    ("https://www.wbur.org/news/2026/05/12/x", False),
+    ("https://nypost.com/2026/10/24/us-news/x", False),
+    ("https://www.ci.example.ny.us/x", False),
+    ("https://www.example.tv/x", False),
+])
+def test_non_us_domains(url, foreign):
+    assert is_foreign_outlet({"url": url, "source": ""}) is foreign
 
 
 # --- classification parsing and verification -------------------------------
@@ -197,8 +231,12 @@ def test_check_evidence_accepts_and_drops_unverified_signals():
     assert cls.days_since_release == 3
 
 
+def test_killed_by_police_is_kept():
+    problem, _ = check_evidence(_cls(killed_by_police=True), ARTICLE)
+    assert problem is None
+
+
 @pytest.mark.parametrize("kw,reason", [
-    ({"killed_by_police": True}, "killed by police"),
     ({"age": 16}, "under 18"),
     ({"state": "ON"}, "not a US state"),
     ({"mh_evidence_quote": "He was deeply troubled, according to a neighbor who knew him."},
@@ -232,35 +270,36 @@ def test_subject_key_matches_repeat_offender_key():
     assert subject_key("Cher", "CA") == ""
 
 
+CAND = {"url": "https://a.com/x", "source": "A", "title": "Headline", "published": "2026-05-12"}
+
+
 def test_make_row_from_classification():
-    row = make_row(7, _cls(), {"url": "https://a.com/x", "source": "A", "title": "t"},
-                   smi_coding.code(ARTICLE))
-    assert row["id"] == "SMI-000007"
-    assert row["subject_key"] == "example_tyler_MA"
+    row = make_row(7, _cls(killed_by_police=True), CAND, smi_coding.code(ARTICLE))
+    assert row["id"] == "SMI-000007" and row["headline"] == "Headline"
+    assert row["subject_key"] == "example_tyler_MA" and row["killed_by_police"] == "true"
     assert row["prior_hospital_discharge"] == "true" and row["competency"] == "false"
     assert row["signal_evidence"].startswith("prior_hospital_discharge: ")
     assert row["coded_by"] == "claude" and row["review_status"] == "pending"
-    assert set(row) == set(config.CSV_COLUMNS)
+    assert set(row) == set(config.ARTICLE_COLUMNS)
 
 
 def test_make_candidate_row_from_phrasebook():
-    row = make_candidate_row(1, smi_coding.code(ARTICLE),
-                             {"url": "https://a.com/x", "source": "A", "title": "Headline", "published": "2026-05-12"})
+    row = make_candidate_row(1, smi_coding.code(ARTICLE), CAND)
     assert row["coded_by"] == "phrasebook" and row["subject_name"] == ""
-    assert row["review_status"] == "pending"
+    assert row["review_status"] == "pending" and row["published"] == "2026-05-12"
     assert row["prior_custody_release"] == "true" and row["days_since_release"] == "3"
-    assert set(row) == set(config.CSV_COLUMNS)
+    assert set(row) == set(config.ARTICLE_COLUMNS)
 
 
 def test_merge_fills_blanks_and_ors_signals():
     keep = make_row(1, _cls(signal_quotes={}, days_since_release=None, age=None),
                     {"url": "https://a.com/1", "source": "A", "title": "t"})
-    new = make_row(2, _cls(), {"url": "https://b.com/2", "source": "B", "title": "t"})
+    new = make_row(2, _cls(killed_by_police=True), {"url": "https://b.com/2", "source": "B", "title": "t"})
     assert obvious_same_incident(new, keep)
     merge_into(keep, new)
     assert keep["additional_sources"] == "https://b.com/2"
     assert keep["age"] == "46" and keep["days_since_release"] == "3"
-    assert keep["prior_hospital_discharge"] == "true"
+    assert keep["prior_hospital_discharge"] == "true" and keep["killed_by_police"] == "true"
     assert "[https://b.com/2]" in keep["signal_evidence"]
 
 
@@ -279,7 +318,7 @@ def test_link_repeat_offenders(tmp_path):
     assert rows[0]["repeat_offender_ids"] == "1234" and rows[1]["repeat_offender_ids"] == ""
 
 
-# --- the processing loop, with the network and the model stubbed ----------
+# --- harvest and classify, with the network and the model stubbed ----------
 
 def _candidates():
     return [
@@ -289,6 +328,8 @@ def _candidates():
          "source": "Example News", "published": "2026-10-10"},
         {"url": "https://news.example.com/2026/10/11/robbery", "title": "Man arrested in robbery",
          "source": "Example News", "published": "2026-10-11"},
+        {"url": "https://www.example.co.uk/2026/10/11/tiger", "title": "Man killed by tiger",
+         "source": "Example UK", "published": "2026-10-11"},
     ]
 
 
@@ -296,149 +337,118 @@ TEXTS = {
     "https://news.example.com/2026/10/10/shooting": ARTICLE,
     "https://news.example.com/2026/10/11/robbery": "Police arrested a man after a store robbery. " * 20,
 }
-WINDOW = datetime(2026, 10, 1)
+START, END = datetime(2026, 10, 1), datetime(2026, 10, 14)
 
 
-def _stub_model(monkeypatch, cls=None, dup=None):
+def test_harvest_without_claude(monkeypatch):
     monkeypatch.setattr(process, "fetch_article_text_cached", TEXTS.get)
-    monkeypatch.setattr(process, "triage_candidates", lambda client, cs: [True] * len(cs))
-    monkeypatch.setattr(process, "classify_article", lambda client, c, text, coding: cls or _cls())
-    monkeypatch.setattr(process, "check_duplicate",
-                        dup or (lambda client, row, rows: DedupeResult(relation="unrelated")))
-
-
-def test_code_candidates_no_llm_queues_for_review(monkeypatch):
-    monkeypatch.setattr(process, "fetch_article_text_cached", TEXTS.get)
-    queue, incidents = [], []
-    counts = process.code_candidates(_candidates(), queue, incidents, window_start=WINDOW)
-    assert counts["prefiltered"] == 1      # the opinion headline
+    articles, seen = [], set()
+    counts = process.harvest_articles(None, _candidates(), articles, seen, START, END)
+    assert counts["prefiltered"] == 2      # the opinion headline and the .co.uk link
     assert counts["no_mh"] == 1            # the robbery has no mental-health language
-    assert counts["new"] == 1 and queue[0]["coded_by"] == "phrasebook"
-    assert queue[0]["review_status"] == "pending" and incidents == []
-    # A second run skips what the queue already has.
-    again = process.code_candidates(_candidates(), queue, incidents, window_start=WINDOW)
-    assert again["new"] == 0 and len(queue) == 1
+    assert counts["new"] == 1 and articles[0]["coded_by"] == "phrasebook"
+    assert articles[0]["review_status"] == "pending"
+    again = process.harvest_articles(None, _candidates(), articles, seen, START, END)
+    assert again["new"] == 0 and len(articles) == 1
 
 
-def test_classified_run_queues_and_never_writes_incidents(monkeypatch):
-    _stub_model(monkeypatch)
-    queue, incidents, seen = [], [], set()
-    counts = process.process_candidates(object(), _candidates(), queue, incidents, seen,
-                                        window_start=WINDOW)
-    assert counts["new"] == 1 and counts["no_mh"] == 1 and counts["prefiltered"] == 1
-    assert queue[0]["subject_name"] == "Tyler Example" and queue[0]["review_status"] == "pending"
-    assert incidents == []
-    assert "https://news.example.com/2026/10/10/shooting" in seen
-
-
-def test_classified_row_replaces_pending_phrasebook_row(monkeypatch):
-    monkeypatch.setattr(process, "fetch_article_text_cached", TEXTS.get)
-    queue, incidents = [], []
-    process.code_candidates(_candidates(), queue, incidents, window_start=WINDOW)
-    pb_id = queue[0]["id"]
-    _stub_model(monkeypatch)
-    process.process_candidates(object(), _candidates(), queue, incidents, set(), window_start=WINDOW)
-    assert len(queue) == 1
-    assert queue[0]["id"] == pb_id and queue[0]["coded_by"] == "claude"
-
-
-def test_report_of_a_queued_incident_merges_into_it(monkeypatch):
-    _stub_model(monkeypatch)
-    queue, incidents = [], []
-    process.process_candidates(object(), _candidates(), queue, incidents, set(), window_start=WINDOW)
-    _stub_model(monkeypatch, dup=lambda client, row, rows: DedupeResult(
-        relation="same_incident", matching_id=rows[0]["id"]))
+def test_decoded_google_link_on_a_foreign_domain_is_dropped(monkeypatch):
     monkeypatch.setattr(process, "fetch_article_text_cached", lambda url: ARTICLE)
-    second = [{"url": "https://other.example.org/story/5", "title": "Gunman was just released",
-               "source": "Other", "published": "2026-10-12"}]
-    counts = process.process_candidates(object(), second, queue, incidents, set(), window_start=WINDOW)
-    assert counts["duplicates"] == 1 and len(queue) == 1
-    assert queue[0]["additional_sources"] == "https://other.example.org/story/5"
+    monkeypatch.setattr(process, "resolve_candidate",
+                        lambda c: c.update(url="https://www.examinerlive.co.uk/news/x", google_url=c["url"]))
+    google = [{"url": "https://news.google.com/rss/articles/abc", "title": "Tiger attack",
+               "source": "Examiner Live", "published": "2026-10-10"}]
+    articles = []
+    counts = process.harvest_articles(None, google, articles, set(), START, END)
+    assert counts["foreign"] == 1 and articles == []
 
 
-def test_report_of_an_accepted_incident_is_queued_as_duplicate(monkeypatch):
-    accepted = make_row(1, _cls(), {"url": "https://a.com/1", "source": "A", "title": "t"})
-    accepted["review_status"] = "accepted"
-    queue, incidents = [dict(accepted)], [dict(accepted)]
-    _stub_model(monkeypatch, dup=lambda client, row, rows: DedupeResult(
-        relation="same_incident", matching_id="SMI-000001"))
-    process.process_candidates(object(), _candidates()[:1], queue, incidents, set(), window_start=WINDOW)
-    assert len(queue) == 2 and queue[1]["duplicate_of"] == "SMI-000001"
-    assert len(incidents) == 1 and incidents[0]["additional_sources"] == ""   # unchanged until review
+def test_claude_codes_every_unrejected_phrasebook_article(monkeypatch):
+    monkeypatch.setattr(process, "fetch_article_text_cached", lambda url: ARTICLE)
+    articles = [make_candidate_row(i, smi_coding.code(ARTICLE),
+                                   {**CAND, "url": f"https://a.com/{i}"}) for i in (1, 2, 3)]
+    articles[0]["review_status"] = "accepted"
+    articles[2]["review_status"] = "rejected"
+    calls = []
+    monkeypatch.setattr(process, "classify_article",
+                        lambda client, c, text, coding: calls.append(c["url"]) or _cls())
+    counts = process.classify_articles(object(), articles)
+    assert counts["coded"] == 2 and sorted(calls) == ["https://a.com/1", "https://a.com/2"]
+    assert articles[0]["subject_name"] == "Tyler Example" and articles[0]["coded_by"] == "claude"
+    assert articles[0]["review_status"] == "accepted"          # review is never changed
+    assert articles[2]["coded_by"] == "phrasebook"              # rejected: never coded
 
 
-def test_killed_by_police_is_never_queued(monkeypatch):
-    _stub_model(monkeypatch, cls=_cls(killed_by_police=True))
-    queue = []
-    counts = process.process_candidates(object(), _candidates(), queue, [], set(), window_start=WINDOW)
-    assert queue == [] and counts["rejected"] == 1
+def test_claude_exclusion_keeps_review_status(monkeypatch):
+    monkeypatch.setattr(process, "fetch_article_text_cached", lambda url: ARTICLE)
+    articles = [make_candidate_row(1, smi_coding.code(ARTICLE), CAND)]
+    articles[0]["review_status"] = "accepted"
+    monkeypatch.setattr(process, "classify_article",
+                        lambda client, c, text, coding: _cls(state="ON"))
+    counts = process.classify_articles(object(), articles)
+    assert counts["excluded"] == 1
+    assert articles[0]["review_status"] == "accepted" and "not a US state" in articles[0]["excluded_reason"]
+
+
+# --- incidents ---------------------------------------------------------------
+
+def _coded(n: int, status="accepted", **kw) -> dict:
+    row = make_row(n, _cls(**kw), {**CAND, "url": f"https://site{n}.com/story"})
+    row["review_status"] = status
+    return row
+
+
+def test_incidents_group_reports_of_one_incident(monkeypatch):
+    monkeypatch.setattr(incidents, "link_repeat_offenders", lambda rows: 0)
+    articles = [_coded(1, age=None), _coded(2), _coded(3, subject_name="Other Person", city="Salem"),
+                _coded(4, status="pending"), _coded(5, status="rejected")]
+    articles[1]["killed_by_police"] = "true"
+    rows, counts = incidents.build_incidents(articles)
+    assert counts == {"articles": 3, "incidents": 2, "grouped": 1, "new": 2}
+    first = next(r for r in rows if "SMI-000001" in r["article_ids"])
+    assert first["article_ids"] == "SMI-000001 SMI-000002" and first["article_count"] == "2"
+    assert first["additional_sources"] == "https://site2.com/story"
+    assert first["age"] == "46" and first["killed_by_police"] == "true"
+    assert articles[0]["incident_id"] == articles[1]["incident_id"] == first["id"]
+    assert articles[3]["incident_id"] == "" and set(rows[0]) == set(config.INCIDENT_COLUMNS)
+
+
+def test_incidents_skip_excluded_and_phrasebook_and_keep_ids(monkeypatch):
+    monkeypatch.setattr(incidents, "link_repeat_offenders", lambda rows: 0)
+    pb = make_candidate_row(9, smi_coding.code(ARTICLE), CAND)
+    pb["review_status"] = "accepted"
+    excluded = _coded(8)
+    excluded["excluded_reason"] = "state 'ON' is not a US state"
+    articles = [_coded(1), pb, excluded]
+    rows, _ = incidents.build_incidents(articles)
+    assert len(rows) == 1 and rows[0]["article_ids"] == "SMI-000001"
+    first_id = rows[0]["id"]
+    articles.append(_coded(2, subject_name="Other Person", city="Salem"))
+    rows, counts = incidents.build_incidents(articles)
+    assert counts["new"] == 1 and articles[0]["incident_id"] == first_id   # stable on rebuild
 
 
 # --- review -----------------------------------------------------------------
 
-def _queued(**kw) -> dict:
-    row = make_row(1, _cls(), {"url": "https://a.com/1", "source": "A", "title": "t"})
-    row.update(kw)
-    return row
+def test_accept_needs_nothing_filled_in():
+    articles = [make_candidate_row(1, smi_coding.code(ARTICLE), CAND)]
+    ok, msg = review.apply_review("SMI-000001", "accepted", {}, articles)
+    assert ok and articles[0]["review_status"] == "accepted" and articles[0]["reviewed_date"]
 
 
-def test_accept_promotes_with_edits(monkeypatch):
-    monkeypatch.setattr(review, "link_repeat_offenders", lambda rows: 0)
-    queue, incidents = [_queued()], []
-    ok, msg = review.apply_review("SMI-000001", "accepted",
-                                  {"other_party": "stranger", "homeless": True, "age": "47"},
-                                  queue, incidents)
-    assert ok, msg
-    assert len(incidents) == 1 and incidents[0]["other_party"] == "stranger"
-    assert incidents[0]["homeless"] == "true" and "homeless: (set by reviewer)" in incidents[0]["signal_evidence"]
-    assert queue[0]["review_status"] == "accepted" and queue[0]["reviewed_date"]
-
-
-@pytest.mark.parametrize("edits,reason", [
-    ({"age": "16"}, "under 18"),
-    ({"state": "ON"}, "not a US state"),
-    ({"subject_role": ""}, "subject role"),
-    ({"other_party": "neighbor"}, "not in the codebook"),
-])
-def test_accept_enforces_inclusion_rules(monkeypatch, edits, reason):
-    monkeypatch.setattr(review, "link_repeat_offenders", lambda rows: 0)
-    queue, incidents = [_queued()], []
-    ok, msg = review.apply_review("SMI-000001", "accepted", edits, queue, incidents)
-    assert not ok and reason in msg
-    assert incidents == [] and queue[0]["review_status"] == "pending"
-
-
-def test_rejecting_an_accepted_row_removes_it(monkeypatch):
-    monkeypatch.setattr(review, "link_repeat_offenders", lambda rows: 0)
-    queue, incidents = [_queued()], []
-    review.apply_review("SMI-000001", "accepted", {}, queue, incidents)
-    ok, _ = review.apply_review("SMI-000001", "rejected", {}, queue, incidents)
-    assert ok and incidents == [] and queue[0]["review_status"] == "rejected"
-
-
-def test_accepting_a_duplicate_merges_into_the_incident(monkeypatch):
-    monkeypatch.setattr(review, "link_repeat_offenders", lambda rows: 0)
-    incident = _queued(review_status="accepted", age="")
-    dup = make_row(2, _cls(), {"url": "https://b.com/2", "source": "B", "title": "t"})
-    dup["duplicate_of"] = "SMI-000001"
-    queue, incidents = [dict(incident), dup], [dict(incident)]
-    ok, msg = review.apply_review("SMI-000002", "accepted", {}, queue, incidents)
-    assert ok and "Merged into SMI-000001" in msg
-    assert len(incidents) == 1 and incidents[0]["additional_sources"] == "https://b.com/2"
-    assert incidents[0]["age"] == "46"   # a blank filled from the second report
-
-
-def test_save_without_deciding(monkeypatch):
-    monkeypatch.setattr(review, "link_repeat_offenders", lambda rows: 0)
-    queue, incidents = [_queued()], []
-    ok, _ = review.apply_review("SMI-000001", None, {"city": "Boston", "competency": False}, queue, incidents)
-    assert ok and queue[0]["city"] == "Boston" and queue[0]["review_status"] == "pending"
-    assert incidents == []
+def test_review_edits_are_checked_but_optional():
+    articles = [make_candidate_row(1, smi_coding.code(ARTICLE), CAND)]
+    ok, _ = review.apply_review("SMI-000001", None, {"other_party": "acquaintance", "homeless": True},
+                                articles)
+    assert ok and articles[0]["other_party"] == "acquaintance"
+    assert "homeless: (set by reviewer)" in articles[0]["signal_evidence"]
+    ok, msg = review.apply_review("SMI-000001", "accepted", {"age": "16"}, articles)
+    assert not ok and "under 18" in msg and articles[0]["review_status"] == "pending"
 
 
 def test_review_page_renders():
     page = review._page()
-    assert "SMI review queue" in page and "acquaintance" in page and "__CODEBOOK__" not in page
+    assert "SMI article review" in page and "acquaintance" in page and "__CODEBOOK__" not in page
 
 
 def test_reference_set_is_present():

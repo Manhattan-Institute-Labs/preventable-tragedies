@@ -164,7 +164,6 @@ An article does NOT qualify if it is:
 - A story with no mental-health indication for the subject. A victim's grief or trauma does not count.
 - Purely about substance use, or primarily about dementia or developmental disability.
 - A story whose subject is under 18.
-- A story in which the subject was KILLED BY POLICE. Set killed_by_police true and qualifies false. A subject shot or injured by police who survived can qualify.
 - A story about an incident outside the United States.
 - A police blotter, arrest log, or list of unrelated bookings.
 
@@ -175,6 +174,7 @@ Field guidance:
 - other_party: who the other person was. When subject_accused: the person the subject harmed or threatened, or "police" for a crisis response with no one harmed. When subject_victim: the person who harmed the subject. One of: {", ".join(OTHER_PARTIES)}. "partner" includes spouses, girlfriends and boyfriends; "family_parent" is the subject's parent, "family_child" the subject's child; "acquaintance" is someone the subject knew who is not family or a partner (a neighbor, friend, roommate, coworker, landlord); "stranger" is someone the subject did not know. Use "multiple" only for more than one TYPE of party (two strangers are "stranger"). Null when there was no other party or the article does not say.
 - incident_form: the most serious form, one of: {", ".join(INCIDENT_FORMS)}.
 - fatality: true if ANYONE involved died, subject or other party. Attempted murder, threats to kill, and non-fatal injuries are not fatalities. violence: true if anyone used or attempted physical violence.
+- killed_by_police: true if the subject was killed by police or other law enforcement (including a deputy, trooper, bailiff or court officer). These incidents QUALIFY: record them, and set the role by who started the harm.
 - signal_quotes: an object whose keys are the system-contact signals the article states, each mapped to the ONE sentence copied VERBATIM, character for character, that states it. Omit any signal the article does not state; an omitted signal means the article did not say, not that it did not happen. Signals:
   prior_hospital_discharge: a hospital or psychiatric facility released the subject before the incident, or the subject had been hospitalized for mental illness before (someone hospitalized before was discharged).
   prior_custody_release: a court, jail or prison released the subject before the incident: bail, bond, probation, parole, pretrial or supervised release, release from jail or prison. Never merge this with prior_hospital_discharge: different agencies, different decisions.
@@ -302,9 +302,9 @@ def days_in_text(days: int, text: str) -> bool:
 
 def check_evidence(cls: IncidentClassification, text: str) -> tuple[str | None, list[str]]:
     """(rejection reason or None, signals dropped for unverifiable quotes).
-    Mutates cls: drops unverified signals and an unsupported days value."""
-    if cls.killed_by_police:
-        return "subject killed by police (excluded)", []
+    Mutates cls: drops unverified signals and an unsupported days value.
+    A subject killed by police is not a rejection: it is recorded in
+    killed_by_police for the criminal-offending restrictions to decide."""
     if not quote_in_text(cls.mh_evidence_quote, text):
         return "mh_evidence_quote not found in article", []
     if cls.state and cls.state not in US_STATES:
