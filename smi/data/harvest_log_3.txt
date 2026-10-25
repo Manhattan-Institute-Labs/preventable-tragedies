@@ -1,0 +1,36 @@
+ANTHROPIC_API_KEY is not set: running the free phrase-book harvest only.
+
+Discovering candidates: 2026-09-13 to 2026-09-27, gdelt=True
+  GDELT gave up on '("released from a psychiatric hospital" OR "discharged from a psychiatric" OR "r'
+  GDELT    0 | ("released from a psychiatric hospital" OR "discharged from a psychiatric" OR "r
+  GDELT   15 | ("released from the hospital" OR "treated and released" OR "denied a bed" OR "ho
+  GDELT gave up on '("family begged" OR "mother begged" OR "repeatedly called for help" OR "pleaded '
+  GDELT    0 | ("family begged" OR "mother begged" OR "repeatedly called for help" OR "pleaded 
+  GDELT    0 | ("tried to get him committed" OR "we tried to get him help")
+  GDELT gave up on '("emotionally disturbed person" OR "person experiencing an emotional crisis" OR '
+  GDELT    0 | ("emotionally disturbed person" OR "person experiencing an emotional crisis" OR 
+  GDELT gave up on '("Baker Act" OR "Section 12" OR "crisis intervention team") (arrested OR psychia'
+  GDELT    0 | ("Baker Act" OR "Section 12" OR "crisis intervention team") (arrested OR psychia
+  GDELT gave up on '(schizophrenia OR schizophrenic OR "bipolar disorder" OR "psychotic episode" OR '
+  GDELT    0 | (schizophrenia OR schizophrenic OR "bipolar disorder" OR "psychotic episode" OR 
+  GDELT gave up on '(schizophrenia OR schizophrenic OR "bipolar disorder" OR "psychotic episode" OR '
+  GDELT    0 | (schizophrenia OR schizophrenic OR "bipolar disorder" OR "psychotic episode" OR 
+  GDELT gave up on '("emotionally disturbed" OR "history of mental illness" OR "off his medication" '
+  GDELT    0 | ("emotionally disturbed" OR "history of mental illness" OR "off his medication" 
+  GDELT   32 | ("emotionally disturbed" OR "history of mental illness" OR "off his medication" 
+  GDELT    0 | ("emotionally disturbed" OR "history of mental illness" OR "off his medication" 
+  GDELT gave up on '("emotionally disturbed" OR "history of mental illness" OR "off his medication" '
+  GDELT    0 | ("emotionally disturbed" OR "history of mental illness" OR "off his medication" 
+  Google News: 233 items across 52 queries
+  GDELT calls 12, retries 18, gave up 8
+  discovery took 712s
+Found 256 candidate URLs
+
+Headline checks kept 214 of 256 candidates
+Resolving 170 Google News redirects...
+  resolved 170/170 in 53s
+Fetching and coding 200 with 8 workers
+
+
+Harvest done. New articles: 134; non-US domains: 14; headline checks: 21; triaged out: 0; no mental-health language: 8; no specific event: 4; no text: 54; duplicates: 0; unresolved: 0; errors: 0.
+articles.csv: 483 articles (134 pending, 0 flagged, 226 accepted, 123 rejected; 0 coded by Claude, 483 by the phrase book only)
