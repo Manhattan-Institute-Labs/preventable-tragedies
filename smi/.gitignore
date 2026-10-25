@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+data/decisions/*.jsonl
+# Fetched article text: a local cache, not something to publish.
+data/articles/
