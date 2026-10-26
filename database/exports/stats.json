@@ -1,12 +1,12 @@
 {
- "updated": "2026-10-25",
- "stories": 439,
- "stories_strict": 439,
- "offenders": 420,
+ "updated": "2026-10-26",
+ "stories": 440,
+ "stories_strict": 440,
+ "offenders": 421,
  "offenders_multiple_incidents": 8,
  "by_state": {
   "NY": 110,
-  "FL": 45,
+  "FL": 46,
   "CA": 29,
   "TX": 22,
   "MI": 19,
@@ -54,7 +54,7 @@
  },
  "by_state_strict": {
   "NY": 110,
-  "FL": 45,
+  "FL": 46,
   "CA": 29,
   "TX": 22,
   "MI": 19,
@@ -101,7 +101,7 @@
   "DC": 1
  },
  "by_release_status": {
-  "none stated": 219,
+  "none stated": 220,
   "parole": 60,
   "bail/bond": 51,
   "probation": 34,
@@ -115,7 +115,7 @@
   "assault": 71,
   "drug offense": 42,
   "sexual assault": 40,
-  "shooting": 31,
+  "shooting": 32,
   "burglary": 26,
   "theft/larceny": 23,
   "other": 23,
@@ -131,7 +131,7 @@
   "carjacking": 2
  },
  "by_severity": {
-  "violent": 284,
+  "violent": 285,
   "property": 66,
   "drug": 42,
   "other": 28,
@@ -177,7 +177,7 @@
   "2024-06": 1,
   "2024-07": 2,
   "2024-08": 2,
-  "2024-09": 3,
+  "2024-09": 4,
   "2024-10": 3,
   "2024-11": 5,
   "2024-12": 8,
