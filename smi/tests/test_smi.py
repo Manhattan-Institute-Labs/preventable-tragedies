@@ -3,6 +3,7 @@ Article text here is invented for the tests."""
 
 import csv
 import json
+import re
 from datetime import datetime
 
 import pytest
@@ -49,6 +50,9 @@ def test_query_counts_and_gdelt_syntax():
     for q in config.GDELT_QUERIES:
         assert len(q) <= config.GDELT_MAX_QUERY_CHARS, (len(q), q)   # GDELT: "too long"
         assert q.count("(") == q.count(")"), q
+        # GDELT: "Parentheses may only be used around OR'd statements."
+        for group in re.findall(r"\(([^()]*)\)", q):
+            assert " OR " in group, (group, q)
         assert q.count('"') % 2 == 0, q
         if " OR " in q:
             assert q.startswith("("), q   # GDELT needs ORs inside parentheses
@@ -56,12 +60,11 @@ def test_query_counts_and_gdelt_syntax():
 
 def test_gdelt_grid_covers_every_combination():
     pairs = set()
-    for q in config.GDELT_QUERIES:
-        if ") (" not in q:
-            continue
-        left, right = q.split(") (", 1)
-        clinical = left.strip("(").split(" OR ")
-        incident = right.strip(")").split(" OR ")
+    for q in config.GDELT_QUERIES[6:]:   # the grid queries follow the six block queries
+        m = re.match(r"\((.*?)\) (.*)$", q)
+        clinical = m.group(1).split(" OR ")
+        rest = m.group(2)
+        incident = rest[1:-1].split(" OR ") if rest.startswith("(") else [rest]
         pairs |= {(c, i) for c in clinical for i in incident}
     expected = {(c, i) for c in config._CLINICAL for i in config._INCIDENT}
     assert expected <= pairs

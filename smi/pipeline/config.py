@@ -134,8 +134,10 @@ GOOGLE_NEWS_QUERIES = DISCHARGE_QUERIES + FAMILY_QUERIES + CRISIS_QUERIES + GRID
 
 
 def _any(terms: list[str]) -> str:
-    """GDELT OR group. GDELT rejects an OR that is not inside parentheses."""
-    return "(" + " OR ".join(terms) + ")"
+    """GDELT OR group. GDELT rejects an OR that is not inside parentheses, and
+    parentheses around anything but an OR ("Parentheses may only be used
+    around OR'd statements"), so a single term is left bare."""
+    return terms[0] if len(terms) == 1 else "(" + " OR ".join(terms) + ")"
 
 
 _DIAGNOSIS_TERMS = ['schizophrenia', 'schizophrenic', '"bipolar disorder"',
