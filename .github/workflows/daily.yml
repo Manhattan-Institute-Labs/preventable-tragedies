@@ -65,6 +65,20 @@ jobs:
         if: always()
         run: python pipeline/enforce_sources.py
 
+      # The serious-mental-illness tracker (smi/): the last day of news,
+      # repeat-offender stories with mental-health language, Claude coding,
+      # incidents, second-source search. Its requirements match database/'s.
+      # Before categorizing, so its incidents that meet this database's
+      # rules are categorized in the same run.
+      - name: Serious-mental-illness tracker
+        if: always()
+        working-directory: smi
+        timeout-minutes: 90
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PYTHONUNBUFFERED: "1"
+        run: python pipeline/run.py daily --max-minutes 60
+
       - name: Categorize new stories
         if: always()
         env:
@@ -77,12 +91,16 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: decisions-${{ github.run_id }}
-          path: database/data/decisions/
+          path: |
+            database/data/decisions/
+            smi/data/decisions/
           if-no-files-found: ignore
           retention-days: 30
 
       - name: Commit updated data and exports
         # always(): a run killed by the timeout still commits its checkpoints.
+        # SMI data that fails validation is discarded, not committed, and
+        # does not hold up this database's update.
         if: always()
         run: |
           git config user.name "preventable-tragedies-bot"
@@ -90,8 +108,9 @@ jobs:
           git checkout -- exports || true
           git pull --rebase --autostash origin main
           python pipeline/validate_data.py || { python pipeline/quarantine.py && python pipeline/validate_data.py; }
+          python ../smi/pipeline/run.py validate || { echo "SMI data failed validation: not committed"; git checkout -- ../smi/data; git clean -fdq ../smi/data; }
           python pipeline/build_exports.py
           python pipeline/pack_decisions.py
-          git add data exports
+          git add data exports ../smi/data
           git diff --cached --quiet || git commit -m "Daily update $(date -u +%F)"
           git push

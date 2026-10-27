@@ -1,0 +1,30 @@
+ANTHROPIC_API_KEY is not set: running the free phrase-book harvest only.
+
+Discovering candidates: 2026-09-27 to 2026-10-11, gdelt=True
+  GDELT    0 | ("released from a psychiatric hospital" OR "discharged from a psychiatric" OR "r
+  GDELT   24 | ("released from the hospital" OR "treated and released" OR "denied a bed" OR "ho
+  GDELT    0 | ("family begged" OR "mother begged" OR "repeatedly called for help" OR "pleaded 
+  GDELT gave up on '("tried to get him committed" OR "we tried to get him help")'
+  GDELT    0 | ("tried to get him committed" OR "we tried to get him help")
+  GDELT gave up on '("emotionally disturbed person" OR "person experiencing an emotional crisis" OR '
+  GDELT    0 | ("emotionally disturbed person" OR "person experiencing an emotional crisis" OR 
+  GDELT gave up on '("Baker Act" OR "Section 12" OR "crisis intervention team") (arrested OR psychia'
+  GDELT    0 | ("Baker Act" OR "Section 12" OR "crisis intervention team") (arrested OR psychia
+  GDELT non-JSON reply for '(schizophrenia OR schizophrenic OR "bipolar disorder" OR "ps': Your query was too short or too long.
+  GDELT gave up on '(schizophrenia OR schizophrenic OR "bipolar disorder" OR "psychotic episode" OR '
+  GDELT    0 | (schizophrenia OR schizophrenic OR "bipolar disorder" OR "psychotic episode" OR 
+  GDELT gave up on '("emotionally disturbed" OR "history of mental illness" OR "off his medication" '
+  GDELT    0 | ("emotionally disturbed" OR "history of mental illness" OR "off his medication" 
+  Google News: 274 items across 52 queries
+  GDELT calls 8, retries 9, gave up 5
+  discovery took 441s
+Found 276 candidate URLs
+
+Headline checks kept 237 of 276 candidates
+Resolving 212 Google News redirects...
+  resolved 212/212 in 65s
+Fetching and coding 208 with 8 workers
+
+
+Harvest done. New articles: 137; non-US domains: 26; headline checks: 39; triaged out: 0; no mental-health language: 19; no specific event: 6; no text: 46; duplicates: 3; unresolved: 0; errors: 0.
+articles.csv: 349 articles (137 pending, 0 flagged, 126 accepted, 86 rejected; 0 coded by Claude, 349 by the phrase book only)

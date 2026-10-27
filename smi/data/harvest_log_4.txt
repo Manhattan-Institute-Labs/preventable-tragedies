@@ -1,0 +1,40 @@
+ANTHROPIC_API_KEY is not set: running the free phrase-book harvest only.
+
+Discovering candidates: 2026-08-30 to 2026-09-13, gdelt=True
+  GDELT gave up on '("released from a psychiatric hospital" OR "discharged from a psychiatric" OR "r'
+  GDELT    0 | ("released from a psychiatric hospital" OR "discharged from a psychiatric" OR "r
+  GDELT   17 | ("released from the hospital" OR "treated and released" OR "denied a bed" OR "ho
+  GDELT gave up on '("family begged" OR "mother begged" OR "repeatedly called for help" OR "pleaded '
+  GDELT    0 | ("family begged" OR "mother begged" OR "repeatedly called for help" OR "pleaded 
+  GDELT gave up on '("tried to get him committed" OR "we tried to get him help")'
+  GDELT    0 | ("tried to get him committed" OR "we tried to get him help")
+  GDELT gave up on '("emotionally disturbed person" OR "person experiencing an emotional crisis" OR '
+  GDELT    0 | ("emotionally disturbed person" OR "person experiencing an emotional crisis" OR 
+  GDELT gave up on '("Baker Act" OR "Section 12" OR "crisis intervention team") (arrested OR psychia'
+  GDELT    0 | ("Baker Act" OR "Section 12" OR "crisis intervention team") (arrested OR psychia
+  GDELT gave up on '(schizophrenia OR schizophrenic OR "bipolar disorder" OR "psychotic episode" OR '
+  GDELT    0 | (schizophrenia OR schizophrenic OR "bipolar disorder" OR "psychotic episode" OR 
+  GDELT gave up on '(schizophrenia OR schizophrenic OR "bipolar disorder" OR "psychotic episode" OR '
+  GDELT    0 | (schizophrenia OR schizophrenic OR "bipolar disorder" OR "psychotic episode" OR 
+  GDELT gave up on '("emotionally disturbed" OR "history of mental illness" OR "off his medication" '
+  GDELT    0 | ("emotionally disturbed" OR "history of mental illness" OR "off his medication" 
+  GDELT gave up on '("emotionally disturbed" OR "history of mental illness" OR "off his medication" '
+  GDELT    0 | ("emotionally disturbed" OR "history of mental illness" OR "off his medication" 
+  GDELT gave up on '("emotionally disturbed" OR "history of mental illness" OR "off his medication" '
+  GDELT    0 | ("emotionally disturbed" OR "history of mental illness" OR "off his medication" 
+  GDELT non-JSON reply for '("emotionally disturbed" OR "history of mental illness" OR "': Parentheses may only be used around OR'd statements.
+  GDELT gave up on '("emotionally disturbed" OR "history of mental illness" OR "off his medication" '
+  GDELT    0 | ("emotionally disturbed" OR "history of mental illness" OR "off his medication" 
+  Google News: 314 items across 52 queries
+  GDELT calls 12, retries 21, gave up 11
+  discovery took 757s
+Found 282 candidate URLs
+
+Headline checks kept 241 of 282 candidates
+Resolving 224 Google News redirects...
+  resolved 224/224 in 68s
+Fetching and coding 218 with 8 workers
+
+
+Harvest done. New articles: 164; non-US domains: 22; headline checks: 34; triaged out: 0; no mental-health language: 3; no specific event: 0; no text: 51; duplicates: 0; unresolved: 0; errors: 0.
+articles.csv: 647 articles (164 pending, 0 flagged, 341 accepted, 142 rejected; 0 coded by Claude, 647 by the phrase book only)

@@ -22,10 +22,13 @@ stored as unclassified, so a category can never rest on a claim the source
 does not make.
 
 The daily job runs this on new rows; the "Categorize (manual)" workflow
-sweeps the whole database.
+sweeps the whole database. Both also categorize the serious-mental-illness
+tracker's incidents that meet this database's rules (../smi/, its
+repeat_offender_rules column), so those show under both categories.
 """
 
 import argparse
+import csv
 import json
 import os
 import sys
@@ -37,7 +40,8 @@ import anthropic
 from pydantic import BaseModel, ValidationError, field_validator
 
 from classify import quote_in_text
-from config import BACKFILL_STORIES_CSV, CATEGORIZE_MODEL, OFFENDER_CATEGORIES, STORIES_CSV
+from config import (BACKFILL_STORIES_CSV, CATEGORIZE_MODEL, OFFENDER_CATEGORIES, SMI_INCIDENTS_CSV,
+                    STORIES_CSV)
 from fetch import fetch_article_text
 from process import DecisionLog, default_decision_log
 from store import load_stories, save_stories
@@ -136,22 +140,16 @@ def categorize_row(client: anthropic.Anthropic, row: dict, log: DecisionLog) -> 
     return result
 
 
-def sweep(client: anthropic.Anthropic, path, limit: int = 0, recheck: bool = False,
-          max_minutes: float = 0, log: DecisionLog | None = None) -> dict:
-    log = log or DecisionLog(default_decision_log())
-    stories = load_stories(path)
-    todo = [s for s in stories if recheck or not s.get("offender_category")]
-    if limit:
-        todo = todo[:limit]
+def _sweep_rows(client: anthropic.Anthropic, todo: list[dict], save, max_minutes: float,
+                log: DecisionLog, view=lambda row: row) -> dict:
+    """Categorize `todo` in place, calling save() after each chunk. `view`
+    presents a row in this database's field names."""
     counts = {"checked": 0, **{c: 0 for c in OFFENDER_CATEGORIES}}
-    if not todo:
-        return counts
-    print(f"{path.name}: categorizing {len(todo)} of {len(stories)} stories")
     t0 = time.monotonic()
 
     def work(s):
         try:
-            return categorize_row(client, s, log)
+            return categorize_row(client, view(s), log)
         except (anthropic.APIError, ValueError, ValidationError) as e:
             print(f"  error on id {s['id']}: {e}")
             return None
@@ -170,8 +168,51 @@ def sweep(client: anthropic.Anthropic, path, limit: int = 0, recheck: bool = Fal
             counts[r.category] += 1
             s["offender_category"] = r.category
             s["category_reason"] = r.reason
-        save_stories(stories, path)
+        save()
     return counts
+
+
+def sweep(client: anthropic.Anthropic, path, limit: int = 0, recheck: bool = False,
+          max_minutes: float = 0, log: DecisionLog | None = None) -> dict:
+    log = log or DecisionLog(default_decision_log())
+    stories = load_stories(path)
+    todo = [s for s in stories if recheck or not s.get("offender_category")]
+    if limit:
+        todo = todo[:limit]
+    if todo:
+        print(f"{path.name}: categorizing {len(todo)} of {len(stories)} stories")
+    return _sweep_rows(client, todo, lambda: save_stories(stories, path), max_minutes, log)
+
+
+def smi_view(row: dict) -> dict:
+    """An SMI incident in this database's field names (../smi/ codebook)."""
+    return {**row, "offender_name": row.get("subject_name", ""),
+            "new_offense_type": row.get("new_offense_type") or row.get("incident_form", "")}
+
+
+def sweep_smi(client: anthropic.Anthropic, path=None, limit: int = 0, recheck: bool = False,
+              max_minutes: float = 0, log: DecisionLog | None = None) -> dict:
+    """Categorize the SMI tracker's incidents that meet this database's rules
+    (its repeat_offender_rules column), so they show under both categories.
+    The file keeps its own columns."""
+    path = path or SMI_INCIDENTS_CSV
+    log = log or DecisionLog(default_decision_log())
+    with open(path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        fields, rows = reader.fieldnames, list(reader)
+    todo = [r for r in rows if r.get("repeat_offender_rules") == "yes"
+            and (recheck or not r.get("offender_category"))]
+    if limit:
+        todo = todo[:limit]
+    if todo:
+        print(f"{path.name}: categorizing {len(todo)} SMI incidents that meet this database's rules")
+
+    def save() -> None:
+        with open(path, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=fields)
+            w.writeheader()
+            w.writerows(rows)
+    return _sweep_rows(client, todo, save, max_minutes, log, view=smi_view)
 
 
 def main() -> None:
@@ -179,15 +220,19 @@ def main() -> None:
     ap.add_argument("--limit", type=int, default=0, help="rows per file (0 = all that need it)")
     ap.add_argument("--recheck", action="store_true", help="categorize rows that already have a category")
     ap.add_argument("--max-minutes", type=float, default=0, help="stop after this long (0 = no limit)")
+    ap.add_argument("--smi-only", action="store_true", help="only the SMI tracker's incidents")
     a = ap.parse_args()
     if not os.environ.get("ANTHROPIC_API_KEY"):
         sys.exit("ANTHROPIC_API_KEY is not set; refusing to run.")
     client = anthropic.Anthropic()
     total = {"checked": 0, **{c: 0 for c in OFFENDER_CATEGORIES}}
-    for path in (STORIES_CSV, BACKFILL_STORIES_CSV):
+    for path in () if a.smi_only else (STORIES_CSV, BACKFILL_STORIES_CSV):
         if path.exists():
             for k, v in sweep(client, path, a.limit, a.recheck, a.max_minutes).items():
                 total[k] += v
+    if SMI_INCIDENTS_CSV.exists():
+        for k, v in sweep_smi(client, SMI_INCIDENTS_CSV, a.limit, a.recheck, a.max_minutes).items():
+            total[k] += v
     print("Categories: " + ", ".join(f"{c} {total[c]}" for c in OFFENDER_CATEGORIES)
           + f" (of {total['checked']} rows)")
 

@@ -18,7 +18,8 @@
      Markup declares what goes where:
        data-field="headline"        → textContent
        data-field="source.outlet"   → nested lookup
-       data-field="category"        → human label from CATEGORIES
+       data-field="category"        → human labels from CATEGORIES (a story
+                                      can carry several: "A · B")
        data-field="place"           → "City, ST"
        data-href="source.url"       → <a href>
        data-photo                   → slot holding the placeholder SVG;
@@ -27,11 +28,15 @@
     return path.split('.').reduce(function (o, k) { return o == null ? o : o[k]; }, obj);
   }
 
+  function categoriesOf(story) {
+    return story.categories || [story.category];
+  }
+
   function fill(root, story) {
     $$('[data-field]', root).forEach(function (el) {
       var key = el.getAttribute('data-field');
       var val;
-      if (key === 'category') val = CATEGORIES[story.category] || story.category;
+      if (key === 'category') val = categoriesOf(story).map(function (c) { return CATEGORIES[c] || c; }).join(' · ');
       else if (key === 'place') val = [story.city, story.state].filter(Boolean).join(', ');
       else val = get(story, key);
       if (val != null) el.textContent = val;
@@ -113,7 +118,7 @@
     var cats = [['all', 'All cases']].concat(Object.keys(CATEGORIES).map(function (k) { return [k, CATEGORIES[k]]; }));
     cats.forEach(function (c) {
       var id = c[0], label = c[1];
-      var n = id === 'all' ? STORIES.length : STORIES.filter(function (s) { return s.category === id; }).length;
+      var n = id === 'all' ? STORIES.length : STORIES.filter(function (s) { return categoriesOf(s).indexOf(id) !== -1; }).length;
       var b = document.createElement('button');
       b.type = 'button';
       b.className = 'chip';
@@ -144,7 +149,7 @@
         b.setAttribute('aria-pressed', String(b.getAttribute('data-cat') === state.cat));
       });
       var matches = STORIES
-        .filter(function (s) { return (state.cat === 'all' || s.category === state.cat) && matchesQuery(s); })
+        .filter(function (s) { return (state.cat === 'all' || categoriesOf(s).indexOf(state.cat) !== -1) && matchesQuery(s); })
         .sort(sorters[state.sort] || sorters.recent);
       var shown = matches.slice(0, state.limit);
       grid.replaceChildren.apply(grid, shown.map(function (s) {

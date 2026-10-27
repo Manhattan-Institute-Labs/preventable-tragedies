@@ -989,3 +989,100 @@ def test_validate_rejects_unknown_category():
     row = make_row(1, _cls(), {"url": "https://wxyz.com/a", "source": "WXYZ"})
     assert any("offender_category" in p for p in validate_data.row_problems({**row, "offender_category": "bad"}))
     assert any("category_reason" in p for p in validate_data.row_problems({**row, "offender_category": "petty"}))
+
+
+# ---- serious-mental-illness incidents (../smi/) --------------------------------
+
+def _smi(n: int, **over) -> dict:
+    row = {"id": f"INC-{n:06d}", "incident_date": "2026-09-01", "city": "Dayton", "state": "OH",
+           "subject_name": f"Person {n} Doe", "subject_key": f"doe_person_OH", "age": "40",
+           "subject_role": "subject_accused", "other_party": "stranger", "incident_form": "stabbing",
+           "new_offense_type": "assault", "new_offense_severity": "violent",
+           "prior_hospital_discharge": "true", "mh_history": "true", "competency": "true",
+           "diagnoses": "schizophrenia", "days_since_release": "3", "release_status": "none stated",
+           "prior_count_arrests": "", "prior_count_convictions": "", "prior_count_felony_convictions": "",
+           "outcome": "charged", "summary": "He is accused of stabbing a man.", "qualifies_strict": "no",
+           "qualifies_smi": "yes", "repeat_offender_rules": "no", "offender_category": "",
+           "category_reason": "", "source_name": "WXYZ", "source_url": f"https://wxyz.com/smi{n}",
+           "additional_sources": f"https://nbc4i.com/smi{n}", "confidence": "high",
+           "corroboration_checked": ""}
+    row.update(over)
+    return row
+
+
+def _write(path, rows):
+    fields = list(dict.fromkeys(k for r in rows for k in r))
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=fields)
+        w.writeheader()
+        w.writerows(rows)
+
+
+def test_exports_merge_smi_incidents(monkeypatch, tmp_path):
+    import build_exports as be
+    import store, config
+    data, site = tmp_path / "data", tmp_path / "site"
+    data.mkdir(); site.mkdir(); (data / "backfill").mkdir()
+    for mod in (store, config, be, validate_data):
+        for name, val in (("STORIES_CSV", data / "stories.csv"), ("BACKFILL_STORIES_CSV", data / "backfill" / "stories.csv"),
+                          ("REMOVED_CSV", data / "removed.csv"), ("EXPORTS_DIR", site), ("OFFENDERS_CSV", data / "offenders.csv")):
+            if hasattr(mod, name):
+                monkeypatch.setattr(mod, name, val)
+    monkeypatch.setattr(be, "REQUIRE_CORROBORATION", True)
+    shared = make_row(1, _cls(), {"url": "https://www.nytimes.com/a", "source": "NYT"})
+    shared["offender_category"], shared["category_reason"] = "violent", "r"
+    store.save_stories([shared])
+    smi = [
+        _smi(1, source_url="https://www.nytimes.com/a", additional_sources=""),   # the same incident
+        _smi(2, subject_role="subject_victim", killed_by_police="true", fatality="true",
+             incident_form="fatal police encounter", new_offense_type="", outcome="died"),
+        _smi(3, qualifies_smi="no"),                                              # fails the rule
+        _smi(4, additional_sources=""),                                          # one outlet only
+        _smi(5, offender_category="petty", category_reason="theft priors", repeat_offender_rules="yes",
+             prior_count_arrests="14", qualifies_strict="yes"),
+    ]
+    _write(tmp_path / "smi.csv", smi)
+    _write(tmp_path / "smi_removed.csv", [{**_smi(6), "removed_date": "2026-10-01",
+                                           "removed_reason": "no eligible articles left"}])
+    monkeypatch.setattr(be, "SMI_INCIDENTS_CSV", tmp_path / "smi.csv")
+    monkeypatch.setattr(be, "SMI_REMOVED_CSV", tmp_path / "smi_removed.csv")
+    be.build_exports()
+    by_id = {r["id"]: r for r in json.loads((site / "stories.json").read_text())}
+    assert sorted(by_id) == [1, 2_000_002, 2_000_005]
+    assert by_id[1]["categories"] == ["violent", "smi"]                  # cross-listed, one card
+    assert by_id[1]["smi_signals"] == ["prior_hospital_discharge", "mh_history"]
+    assert by_id[2_000_002]["categories"] == ["smi"] and by_id[2_000_002]["offender_name"] == "Person 2 Doe"
+    assert by_id[2_000_002]["incident_form"] == "fatal police encounter"
+    assert "subject_role" not in by_id[2_000_002] and "other_party" not in by_id[2_000_002]
+    assert by_id[2_000_005]["categories"] == ["smi", "petty"]            # reverse cross-listed
+    assert by_id[2_000_005]["prior_count_arrests"] == 14 and by_id[2_000_005]["days_since_release"] == 3
+    stats = json.loads((site / "stats.json").read_text())
+    assert stats["by_category"] == {"smi": 3, "violent": 1, "petty": 1}
+    assert stats["offenders"] == 1                                        # this database's people only
+    assert "2000006" in json.loads((site / "removed.json").read_text())
+
+
+def test_same_incident_needs_a_shared_source_or_nearby_dates():
+    from build_exports import same_incident
+    story = {"source_url": "https://a.com/x", "offender_key": "doe_jane_OH", "incident_date": "2026-09-01"}
+    assert same_incident(story, {"source_url": "https://a.com/x/?utm_source=t"})
+    assert same_incident(story, {"source_url": "https://b.com/y", "subject_key": "doe_jane_OH",
+                                 "incident_date": "2026-09-15"})
+    assert not same_incident(story, {"source_url": "https://b.com/y", "subject_key": "doe_jane_OH",
+                                     "incident_date": "2026-12-01"})     # same person, later incident
+
+
+def test_categorize_sweep_smi_only_rows_meeting_the_rules(monkeypatch, tmp_path):
+    import categorize as ca
+    path = tmp_path / "incidents.csv"
+    _write(path, [_smi(1, repeat_offender_rules="yes", prior_count_arrests="14"), _smi(2)])
+    seen = []
+    monkeypatch.setattr(ca, "fetch_article_text", lambda u: ARTICLE)
+    monkeypatch.setattr(ca, "ask", lambda c, row, text: seen.append(row) or ca.CategoryResult(
+        category="petty", violent_priors=0, reason="theft priors",
+        evidence_quote="Court records show Smith has been arrested 11 times since 2015"))
+    counts = ca.sweep_smi(None, path, log=process.DecisionLog(tmp_path / "log.jsonl"))
+    assert counts["checked"] == 1 and seen[0]["offender_name"] == "Person 1 Doe"
+    rows = list(csv.DictReader(open(path, newline="", encoding="utf-8")))
+    assert rows[0]["offender_category"] == "petty" and rows[1]["offender_category"] == ""
+    assert rows[0]["mh_history"] == "true"                                # its own columns kept

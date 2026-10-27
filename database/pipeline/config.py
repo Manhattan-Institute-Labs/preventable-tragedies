@@ -22,6 +22,16 @@ BACKFILL_SEEN_URLS_JSON = BACKFILL_DIR / "seen_urls.json"
 BACKFILL_DONE_WEEKS_JSON = BACKFILL_DIR / "done_weeks.json"
 BACKFILL_ID_BASE = 1_000_000
 
+# The serious-mental-illness tracker (../smi/). Its incidents that meet its
+# inclusion rule and the publication rule are exported beside these stories
+# under the "smi" category (build_exports.py), with ids from SMI_ID_BASE up
+# (INC-000123 is 2000123). categorize.py also categorizes its incidents that
+# meet this database's rules, so they show under both categories.
+SMI_DIR = REPO_ROOT.parent / "smi"
+SMI_INCIDENTS_CSV = SMI_DIR / "data" / "incidents.csv"
+SMI_REMOVED_CSV = SMI_DIR / "data" / "removed_incidents.csv"
+SMI_ID_BASE = 2_000_000
+
 # Haiku for the bulk stages (triage, classify, dedupe): volume is hundreds of
 # articles a day and the tasks are extraction, not judgment. Sonnet for the
 # low-volume feedback triage.

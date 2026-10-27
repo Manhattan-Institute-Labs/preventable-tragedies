@@ -19,6 +19,7 @@ on:
       - Mug shot sweep (manual)
       - Backfill (manual)
       - Categorize (manual)
+      - SMI backfill (manual)
     types: [completed]
   workflow_dispatch:
 

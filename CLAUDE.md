@@ -6,6 +6,7 @@ A Manhattan Institute site that documents "preventable tragedies": serious crime
 
 - `site/`: the static four-page site (first draft, on GitHub Pages). `site/build.py` generates its case data from `database/exports/`; other copy is placeholder. Its own `CLAUDE.md` covers structure, conventions, design rules and backlog.
 - `database/`: the frequent-offender case database and the pipeline that maintains it (news discovery, Claude classification with verbatim-quote checks, dedupe, second-source search), carried over from the Underincarcerated repo. `database/README.md` covers inclusion criteria, schema and commands. Workflows live in `.github/workflows/` and run with `database/` as their working directory. **These are real, named people:** the content rules below apply to every row.
+- `smi/`: the serious-mental-illness incident tracker, built on the `database/` pipeline with its own inclusion rules, codebook and reference set; `subject_key` matches `offender_key` so people in both are linked. It runs in the same daily job, and `database/pipeline/build_exports.py` merges its qualifying incidents into `exports/` as the "Serious mental illness" category. `smi/README.md` covers it. Also real, named people: the same content rules apply.
 
 Other parts of the project (e.g. a colleague's parallel database) will get their own top-level folders.
 

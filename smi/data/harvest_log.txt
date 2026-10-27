@@ -1,0 +1,28 @@
+Discovering candidates: last 14 days, gdelt=True
+  GDELT gave up on '("released from a psychiatric hospital" OR "discharged from a psychiatric" OR "r'
+  GDELT    0 | ("released from a psychiatric hospital" OR "discharged from a psychiatric" OR "r
+  GDELT   64 | ("released from the hospital" OR "treated and released" OR "denied a bed" OR "ho
+  GDELT gave up on '("family begged" OR "mother begged" OR "repeatedly called for help" OR "pleaded '
+  GDELT    0 | ("family begged" OR "mother begged" OR "repeatedly called for help" OR "pleaded 
+  GDELT    0 | ("tried to get him committed" OR "we tried to get him help")
+  GDELT gave up on '("emotionally disturbed person" OR "person experiencing an emotional crisis" OR '
+  GDELT    0 | ("emotionally disturbed person" OR "person experiencing an emotional crisis" OR 
+  GDELT gave up on '("Baker Act" OR "Section 12" OR "crisis intervention team") (arrested OR psychia'
+  GDELT    0 | ("Baker Act" OR "Section 12" OR "crisis intervention team") (arrested OR psychia
+  GDELT gave up on '(schizophrenia OR schizophrenic OR "bipolar disorder" OR "psychotic episode" OR '
+  GDELT    0 | (schizophrenia OR schizophrenic OR "bipolar disorder" OR "psychotic episode" OR 
+  GDELT gave up on '("emotionally disturbed" OR "history of mental illness" OR "off his medication" '
+  GDELT    0 | ("emotionally disturbed" OR "history of mental illness" OR "off his medication" 
+  Google News: 270 items across 52 queries
+  GDELT calls 8, retries 13, gave up 6
+  discovery took 511s
+Found 320 candidate URLs
+
+Headline checks kept 289 of 320 candidates
+Resolving 224 Google News redirects...
+  resolved 224/224 in 69s
+Fetching and coding 287 with 8 workers
+
+
+Done. Queued 212 phrase-book candidates for review; no mental-health language: 17, no specific event: 6, no text: 53, headline checks: 31, duplicates: 1, unresolved: 0, errors: 0.
+review_queue.csv: 212 rows (212 pending, 0 flagged, 0 accepted, 0 rejected)
