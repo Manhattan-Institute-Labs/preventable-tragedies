@@ -2,6 +2,12 @@
  "updated": "2026-10-27",
  "stories": 442,
  "stories_strict": 442,
+ "by_category": {
+  "violent": 174,
+  "unclassified": 140,
+  "petty": 127,
+  "pending": 1
+ },
  "offenders": 423,
  "offenders_multiple_incidents": 8,
  "by_state": {
