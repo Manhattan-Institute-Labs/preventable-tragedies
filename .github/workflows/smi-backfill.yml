@@ -1,0 +1,82 @@
+name: SMI backfill (manual)
+
+# The serious-mental-illness tracker, run backwards: harvests the next
+# `windows` windows of `days` days before the earliest one already done,
+# codes everything still uncoded (the first run also codes the articles
+# reviewed by hand before Claude was available), builds incidents and
+# searches for second sources. Then categorizes incidents that meet the
+# repeat-offender rules and rebuilds the exports.
+
+on:
+  workflow_dispatch:
+    inputs:
+      windows:
+        description: "Windows to harvest, going back from the earliest done"
+        default: "4"
+      days:
+        description: "Days per window"
+        default: "14"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data-update  # never alongside the daily job or another data workflow
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: smi/requirements.txt
+
+      - run: pip install -r smi/requirements.txt
+
+      - name: Harvest, code, group, corroborate
+        working-directory: smi
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PYTHONUNBUFFERED: "1"
+        run: >-
+          python pipeline/run.py backfill --windows "${{ inputs.windows || '4' }}"
+          --days "${{ inputs.days || '14' }}" --max-minutes 220 --corroborate-minutes 60
+
+      - name: Categorize incidents that meet the repeat-offender rules
+        if: always()
+        working-directory: database
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PYTHONUNBUFFERED: "1"
+        run: python pipeline/categorize.py --smi-only --max-minutes 20
+
+      - name: Upload decision log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smi-backfill-decisions-${{ github.run_id }}
+          path: smi/data/decisions/
+          if-no-files-found: ignore
+          retention-days: 90
+
+      - name: Commit updated data and exports
+        if: always()
+        working-directory: database
+        run: |
+          git config user.name "preventable-tragedies-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout -- exports || true
+          git pull --rebase --autostash origin main
+          python ../smi/pipeline/run.py validate || { echo "SMI data failed validation: not committed"; git checkout -- ../smi/data; git clean -fdq ../smi/data; }
+          python pipeline/build_exports.py
+          git add exports data/offenders.csv ../smi/data
+          git diff --cached --quiet || git commit -m "SMI backfill: ${{ inputs.windows || '4' }} windows"
+          git push

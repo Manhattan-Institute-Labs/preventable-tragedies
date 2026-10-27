@@ -22,7 +22,7 @@ from typing import Literal, Optional
 import anthropic
 from pydantic import BaseModel
 
-from config import DEDUPE_MODEL, SIGNAL_FIELDS
+from config import DEDUPE_MODEL, PRIOR_COUNT_FIELDS, SIGNAL_FIELDS
 from store import subject_key
 
 DATE_WINDOW_DAYS = 21
@@ -166,11 +166,52 @@ def _split_evidence(value: str) -> dict[str, str]:
     return out
 
 
+def _diagnoses(row: dict) -> list[str]:
+    return [d.strip() for d in (row.get("diagnoses") or "").split(";") if d.strip()]
+
+
+def _count(row: dict, f: str) -> int:
+    v = str(row.get(f) or "")
+    return int(v) if v.isdigit() else 0
+
+
+def _no_release(row: dict) -> bool:
+    return row.get("release_status") in ("", None, "none stated")
+
+
+# The facts an incident can be missing. A later report is kept only if it
+# supplies one of these (incidents.py); otherwise it adds nothing.
+IDENTITY_FIELDS = ("subject_name", "age", "sex", "city", "state")
+OUTCOME_FLAGS = ("fatality", "violence", "killed_by_police")
+
+
+def new_info(keep: dict, new_row: dict) -> list[str]:
+    """What new_row reports that the incident does not have yet: a system-
+    contact signal, a named diagnosis, a prior count (or a higher one), prior
+    offenses, a release status, days since release, a death, violence or a
+    police killing, or a missing name, age, sex or place."""
+    out = [f for f in SIGNAL_FIELDS if new_row.get(f) == "true" and keep.get(f) != "true"]
+    have = {d.lower() for d in _diagnoses(keep)}
+    out += [f"diagnosis: {d}" for d in _diagnoses(new_row) if d.lower() not in have]
+    out += [f for f in PRIOR_COUNT_FIELDS if _count(new_row, f) > _count(keep, f)]
+    if new_row.get("prior_offenses") and not keep.get("prior_offenses"):
+        out.append("prior_offenses")
+    if not _no_release(new_row) and _no_release(keep):
+        out.append("release_status")
+    if new_row.get("days_since_release") and not keep.get("days_since_release"):
+        out.append("days_since_release")
+    out += [f for f in OUTCOME_FLAGS if new_row.get(f) == "true" and keep.get(f) != "true"]
+    out += [f for f in IDENTITY_FIELDS if new_row.get(f) and not keep.get(f)]
+    return out
+
+
 def merge_into(keep: dict, new_row: dict) -> None:
     """Fold a second report of the same incident into the stored row: its URL
     joins additional_sources, and it fills what the first report lacked. A
     signal one report supports is true for the incident, with its quote. A
-    value the stored row already has is never overwritten."""
+    value the stored row already has is never overwritten, except a prior
+    count, which takes the higher stated number (as the repeat-offender
+    dedupe does) together with the quote that states it."""
     url = new_row.get("source_url", "")
     urls = [u for u in (keep.get("additional_sources") or "").split() if u]
     for u in [url] + (new_row.get("additional_sources") or "").split():
@@ -179,16 +220,28 @@ def merge_into(keep: dict, new_row: dict) -> None:
     keep["additional_sources"] = " ".join(urls)
 
     for f in ("subject_name", "age", "sex", "city", "state", "other_party", "incident_form",
-              "days_since_release", "failure_point", "responsible_system"):
+              "new_offense_type", "new_offense_severity", "days_since_release",
+              "failure_point", "responsible_system", "outcome", "mh_evidence_quote"):
         if not keep.get(f) and new_row.get(f):
             keep[f] = new_row[f]
     if keep.get("subject_name"):   # a name or state may have just been filled
         keep["subject_key"] = subject_key(keep["subject_name"], keep.get("state"))
     if len(new_row.get("incident_date") or "") > len(keep.get("incident_date") or ""):
         keep["incident_date"] = new_row["incident_date"]   # the more precise date
-    for f in ("fatality", "violence", "killed_by_police"):
+    for f in OUTCOME_FLAGS:
         if new_row.get(f) == "true":
             keep[f] = "true"
+
+    higher = [f for f in PRIOR_COUNT_FIELDS if _count(new_row, f) > _count(keep, f)]
+    for f in higher:
+        keep[f] = new_row[f]
+    if new_row.get("prior_evidence_quote") and (higher or not keep.get("prior_evidence_quote")):
+        keep["prior_evidence_quote"] = new_row["prior_evidence_quote"]
+    if new_row.get("prior_offenses") and not keep.get("prior_offenses"):
+        keep["prior_offenses"] = new_row["prior_offenses"]
+    if _no_release(keep) and not _no_release(new_row):
+        for f in ("release_status", "release_evidence_quote", "releasing_jurisdiction"):
+            keep[f] = new_row.get(f, "")
 
     evidence = _split_evidence(keep.get("signal_evidence", ""))
     for f, quote in _split_evidence(new_row.get("signal_evidence", "")).items():
@@ -197,8 +250,8 @@ def merge_into(keep: dict, new_row: dict) -> None:
             evidence[f] = f"{quote} [{url}]"
     keep["signal_evidence"] = " || ".join(f"{f}: {q}" for f, q in evidence.items())
 
-    diagnoses = [d.strip() for d in (keep.get("diagnoses") or "").split(";") if d.strip()]
-    for d in (new_row.get("diagnoses") or "").split(";"):
-        if d.strip() and d.strip() not in diagnoses:
-            diagnoses.append(d.strip())
+    diagnoses = _diagnoses(keep)
+    for d in _diagnoses(new_row):
+        if d.lower() not in {x.lower() for x in diagnoses}:
+            diagnoses.append(d)
     keep["diagnoses"] = "; ".join(diagnoses)

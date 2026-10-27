@@ -20,8 +20,10 @@ Changes from the version that coded the reference set:
     mention a release or discharge.
   - "criminal history" counts as prior_arrests.
   - incident forms use the codebook's labels (config.INCIDENT_FORMS).
-  - other_party is new, and killed_by_police is recorded as a flag: those
-    incidents are kept for the later criminal-offending restrictions.
+  - other_party is new, and killed_by_police is recorded as a flag.
+  - An "emotionally disturbed person" call is its own signal (edp_call), out
+    of crisis_call. mh_history (a stated history of mental illness) and
+    psych_medication (any psychiatric medication) are new.
 
 A phrase book cannot tell whose history a sentence describes: a victim's
 record or an earlier case can set a field. That is why every match keeps the
@@ -116,9 +118,10 @@ PHRASES = [
     ("police_brought_for_eval", "A.police_transport_to_care",
      r"ordered (?:for|to undergo)[\w ]{0,25}(?:evaluation|evaluat)"),
 
-    # --- crisis contact
-    ("crisis_call", "A.crisis_call",
-     r"emotionally disturbed|\bEDP\b|person experiencing an emotional crisis"),
+    # --- crisis contact. An "emotionally disturbed person" call is its own
+    # signal: on its own it meets the inclusion rule, other crisis calls do not.
+    ("edp_call", "A.edp_call",
+     r"emotionally disturbed|\bEDP\b|person (?:experiencing an|in) emotional crisis"),
     ("crisis_call", "A.welfare_check", r"wellness check|welfare check|well-being check"),
     ("crisis_call", "A.crisis_call", r"called 911|911 call|dialed 911"),
     ("crisis_call", "A.crisis_call", r"mental health crisis|in active crisis|acute crisis|psychiatric crisis"),
@@ -145,6 +148,30 @@ PHRASES = [
     ("medication_lapse", "B.medication_lapse",
      r"off (?:his|her|their) meds|off medication|unmedicated|medication change|not on his meds"),
     ("medication_lapse", "B.medication_lapse", r"noncompliance|non-compliance"),
+    ("psych_medication", "B.psych_medication",
+     r"(?:psychiatric|antipsychotic|psychotropic|mental health|bipolar|schizophrenia) medications?|"
+     r"antipsychotics?|injectable medication|\b(?:lithium|clozapine|Clozaril|haloperidol|Haldol|"
+     r"risperidone|Risperdal|Abilify|Seroquel|Zyprexa|Invega)\b"),
+    ("psych_medication", "B.psych_medication",
+     r"(?:stopped|off (?:his|her|their)|not taking|non-?compliant with|discontinued|refused|"
+     r"prescribed|taking)[\w ]{0,15}(?:medication|meds)\b|off (?:his|her|their) meds|unmedicated"),
+
+    # --- a history of mental illness before this incident
+    ("mh_history", "B.mh_history",
+     r"history of (?:severe |serious |untreated )?(?:mental illness|mental health (?:issues|problems|"
+     r"struggles|crises)|psychiatric (?:illness|problems|treatment|hospitali[sz]ations?)|psychosis)"),
+    ("mh_history", "B.mh_history",
+     r"(?:long|lengthy|documented|known|years-long|lifelong|decades-long) (?:battle|struggles?) with "
+     r"(?:mental illness|schizophrenia|bipolar)"),
+    ("mh_history", "B.mh_history",
+     r"(?:had )?(?:long )?struggled (?:for years )?with (?:mental illness|mental health|"
+     r"schizophrenia|bipolar)"),
+    ("mh_history", "B.mh_history",
+     r"(?:had been|was previously|previously|had previously been) diagnosed|"
+     r"diagnosed (?:\w+ ){0,3}(?:years|months) (?:ago|earlier|before)"),
+    ("mh_history", "B.mh_history",
+     r"(?:had been|was|has been) (?:being )?treated for (?:mental illness|mental health|"
+     r"schizophrenia|bipolar|psychosis)"),
 
     # --- refusal / insight
     ("treatment_refusal", "B.treatment_refusal",

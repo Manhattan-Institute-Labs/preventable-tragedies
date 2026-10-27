@@ -2,7 +2,8 @@ name: Tests
 
 on:
   push:
-    paths: ["database/pipeline/**", "database/tests/**", "database/requirements.txt"]
+    paths: ["database/pipeline/**", "database/tests/**", "database/requirements.txt",
+            "smi/pipeline/**", "smi/tests/**", "smi/requirements.txt"]
   pull_request:
 
 jobs:
@@ -21,3 +22,20 @@ jobs:
           cache-dependency-path: database/requirements.txt
       - run: pip install -r requirements.txt pytest
       - run: python -m pytest -q
+
+  test-smi:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: smi
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: smi/requirements.txt
+      - run: pip install -r requirements.txt pytest
+      - run: python -m pytest -q
+      - run: python pipeline/run.py validate

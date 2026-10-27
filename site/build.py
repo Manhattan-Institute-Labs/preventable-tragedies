@@ -24,14 +24,35 @@ STORIES_JSON = REPO_ROOT / "database" / "exports" / "stories.json"
 
 PAGES = ["index.html", "stories.html", "facts.html", "solve.html"]
 
-# Filter chips, keyed by the database's offender_category vocabulary (set by
-# database/pipeline/categorize.py from the prior record). Rows the sweep
-# hasn't reached yet are "pending".
+# Filter chips, keyed by the exports' `categories` vocabulary: the database's
+# offender_category (set by database/pipeline/categorize.py from the prior
+# record; "pending" for rows the sweep hasn't reached yet), plus "smi" for
+# incidents from the serious-mental-illness tracker (smi/). A record can
+# carry several: a card shows under each.
 CATEGORIES = {
     "violent": "Frequent violent offender",
     "petty": "Very frequent petty offender",
+    "smi": "Serious mental illness",
     "unclassified": "Record not detailed",
     "pending": "Not yet categorized",
+}
+
+# The SMI tracker's earlier-system-contact signals, in the order its cards
+# lead with them when the article states no prior count, and their wording.
+SMI_SIGNAL_LABELS = {
+    "prior_hospital_discharge": "Prior psychiatric hospitalization",
+    "prior_custody_release": "Earlier release from custody",
+    "police_brought_for_eval": "Earlier taken for a psychiatric evaluation",
+    "aot": "Court-ordered treatment",
+    "family_sought_help": "Family sought help",
+    "edp_call": "Police called for an emotionally disturbed person",
+    "prior_police_contact": "Known to police",
+    "prior_arrests": "Prior arrests",
+    "treatment_refusal": "Refused treatment",
+    "medication_lapse": "Stopped taking medication",
+    "psych_medication": "Psychiatric medication",
+    "diagnosis_named": "Diagnosed",
+    "mh_history": "History of mental illness",
 }
 
 # release_status vocabulary -> wording on a card. "none stated" shows nothing.
@@ -64,7 +85,8 @@ def plural(n: int, word: str) -> str:
 
 
 def headline(row: dict) -> str:
-    offense = row["new_offense_type"] or "other"
+    # SMI incidents with no offense (no one was accused) lead with what happened.
+    offense = row["new_offense_type"] or row.get("incident_form") or "other"
     offense = "Other offense" if offense == "other" else offense[0].upper() + offense[1:]
     outcome = (row["outcome"] or "").strip()
     # Short outcomes ("arrested", "charged") read as a label; long ones are
@@ -87,8 +109,39 @@ def counts(row: dict) -> list[dict]:
     return out
 
 
+def system_contacts(row: dict) -> list[dict]:
+    """For SMI incidents: the earlier system contacts the articles quote, in
+    the order a card leads with them. Days since a release go first, when
+    the article printed them."""
+    signals = row.get("smi_signals") or []
+    out = []
+    # Facts a card already shows another way.
+    shown = set()
+    if counts(row):
+        shown.add("prior_arrests")
+    if STATUS_LABELS.get(row["release_status"]):
+        shown.add("prior_custody_release")
+    days = row.get("days_since_release")
+    released = [s for s in ("prior_hospital_discharge", "prior_custody_release") if s in signals]
+    if days is not None and len(released) == 1:
+        place = "a psychiatric hospital" if released[0] == "prior_hospital_discharge" else "custody"
+        out.append({"count": "<1" if days == 0 else str(days),
+                    "label": f"{'day' if days <= 1 else 'days'} after release from {place}"})
+        shown.add(released[0])
+    for s, label in SMI_SIGNAL_LABELS.items():
+        if s in signals and s not in shown:
+            if s == "diagnosis_named" and row.get("diagnoses"):
+                label = f"Diagnosed with {row['diagnoses'].split(';')[0].strip()}"
+            out.append({"count": "", "label": label})
+    return out
+
+
 def to_story(row: dict) -> dict:
-    stated = counts(row) + [{"count": "—", "label": "no other count stated"}] * 2
+    categories = row.get("categories") or [row.get("offender_category") or "pending"]
+    stated = counts(row)
+    if "smi" in categories:
+        stated += system_contacts(row)
+    stated += [{"count": "—", "label": "no other count stated"}] * 2
     status = STATUS_LABELS.get(row["release_status"], "")
     return {
         "id": row["id"],
@@ -98,7 +151,8 @@ def to_story(row: dict) -> dict:
         "state": row["state"],
         "date": row["incident_date"],
         "dateLabel": date_label(row["incident_date"]),
-        "category": row.get("offender_category") or "pending",
+        "category": categories[0],
+        "categories": categories,
         "headline": headline(row),
         "summary": row["summary"],
         "priorArrests": row["prior_count_arrests"],
@@ -114,7 +168,7 @@ def to_story(row: dict) -> dict:
 def build() -> None:
     rows = json.loads(STORIES_JSON.read_text(encoding="utf-8"))
     stories = [to_story(r) for r in rows]
-    used = {s["category"] for s in stories}
+    used = {c for s in stories for c in s["categories"]}
 
     if OUT_DIR.exists():
         shutil.rmtree(OUT_DIR)

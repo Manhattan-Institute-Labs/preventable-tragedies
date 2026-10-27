@@ -1,19 +1,22 @@
-"""Manual review of articles: is this the right general type of story?
+"""Spot-check articles: is this the right general type of story?
 
     python pipeline/run.py review          # opens http://127.0.0.1:8765
 
-Serves a page on this machine only. Each article shows its source link, the
-mental-health quote, the quote behind every signal, and the phrase book's
-matches.
+Review is optional: Claude's coding decides what goes into incidents, and
+this page is for checking its work. Serves a page on this machine only.
+Each article shows its source link, the mental-health quote, the quote
+behind every signal, its incident and how the incident used it.
 
-  Accept  -> the article is the right general type. Nothing needs filling
-             in: Claude codes the details later, and only accepted articles
-             it does not exclude are grouped into incidents (incidents.py).
-  Reject  -> stays in articles.csv as rejected, for tuning; never coded.
+  Accept  -> looked at, and the right general type. Changes nothing else.
+  Reject  -> stays in articles.csv as rejected and is never coded; from the
+             next incidents rebuild it is out of its incident (and an
+             incident left with no articles is removed).
   Flag    -> stays for a second look.
 
 Fields can still be corrected and saved, and those values are checked
-against the codebook, but none is required.
+against the codebook, but none is required. The page holds the articles in
+memory: stop it before running a harvest, or a later click would overwrite
+the new rows.
 """
 
 import json
@@ -140,7 +143,7 @@ textarea{min-height:56px}
 @media (max-width:600px){.wrap{padding:12px}}
 </style></head><body>
 <header><h1>SMI article review</h1>
-<p class="lede">Accept means the article is the right general type of story. Nothing needs filling in: Claude codes the details and groups accepted articles into incidents later.</p>
+<p class="lede">A spot-check of Claude's work. Accept means the article is the right general type of story; Reject keeps it out of its incident from the next rebuild. Nothing needs filling in.</p>
 <div class="tabs" id="tabs"></div></header>
 <div class="wrap" id="list"></div>
 <script>
@@ -169,7 +172,7 @@ function card(r){
   <div class="hd"><div class="t">${esc(r.headline || r.summary)}</div>
    <div class="s"><span class="badge ${r.coded_by==="phrasebook"?"pb":""}">${esc(r.coded_by)}</span>${esc(r.id)} &middot; ${esc(r.published || r.incident_date)} &middot;
    <a href="${esc(r.source_url)}" target="_blank" rel="noopener">${esc(r.source_name||"source")}</a>
-   ${r.incident_id ? " &middot; incident " + esc(r.incident_id) : ""}
+   ${r.incident_id ? " &middot; incident " + esc(r.incident_id) + (r.contribution ? " (" + esc(r.contribution) + ")" : "") : ""}
    ${r.repeat_offender_ids ? " &middot; repeat-offender ids: " + esc(r.repeat_offender_ids) : ""}</div>
    ${r.excluded_reason ? `<div class="excl">Claude excluded this article from incidents: ${esc(r.excluded_reason)}</div>` : ""}
   </div>

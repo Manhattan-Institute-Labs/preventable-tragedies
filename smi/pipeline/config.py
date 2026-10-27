@@ -2,37 +2,73 @@
 
 The tracker sits beside the repeat-offender database in ../database/ and
 follows its pipeline: discovery, headline triage, full-text classification
-with verbatim evidence quotes, deduplication, and a person key built the same
-way as that database's offender_key, so a person in both can be linked.
+with verbatim evidence quotes, deduplication, second-source search, and a
+person key built the same way as that database's offender_key, so a person
+in both can be linked. Its incidents that meet the inclusion rule are
+published on the site as the "Serious mental illness" category, by
+../database/pipeline/build_exports.py.
 """
 
+import importlib.util
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent  # the smi/ folder
 DATA_DIR = REPO_ROOT / "data"
 REFERENCE_DIR = REPO_ROOT / "reference"
 
-# Two tables. articles.csv has one row per article: every coded article waits
-# there for review, and a reviewer's accept means only that it is the right
-# general type of story. incidents.csv is built from accepted articles once
-# Claude has coded them: one row per incident, several articles each. The
-# preventable-tragedies criminal-offending restrictions are applied to the
-# incidents after that, not here.
+# Three tables. articles.csv has one row per article; Claude codes each one,
+# and a reviewer can reject one at any time (review is a spot-check, not a
+# gate). incidents.csv is built from the coded articles: one row per
+# incident, with the inclusion rule applied (qualifies_smi). subjects.csv has
+# one row per person, like the repeat-offender database's offenders.csv.
 ARTICLES_CSV = DATA_DIR / "articles.csv"
 INCIDENTS_CSV = DATA_DIR / "incidents.csv"
+SUBJECTS_CSV = DATA_DIR / "subjects.csv"
+# Incidents that lost all their articles (rejected in review, or excluded on
+# a re-code). Their ids are never reused: a published id must not come back
+# as a different person.
+REMOVED_INCIDENTS_CSV = DATA_DIR / "removed_incidents.csv"
 # The date windows already harvested, so the next run can continue backwards.
 HARVEST_WINDOWS_JSON = DATA_DIR / "harvest_windows.json"
 SEEN_URLS_JSON = DATA_DIR / "seen_urls.json"
 QUERY_STATS_JSON = DATA_DIR / "query_stats.json"
+# Repeat-offender story ids whose articles have been read for mental-health
+# language (crosslist.py), so each is read once.
+CROSSLIST_CHECKED_JSON = DATA_DIR / "crosslist_checked.json"
 DECISIONS_DIR = DATA_DIR / "decisions"   # per-run audit log (gitignored)
 ARTICLE_CACHE_DIR = DATA_DIR / "articles"  # fetched article text (gitignored)
 REFERENCE_CSV = REFERENCE_DIR / "reference_incidents.csv"
 
-# The repeat-offender database, read (never written) to link people in both.
+# The repeat-offender database. Its stories are read (never written) to link
+# people in both and to cross-list its people who show mental illness.
+REPEAT_OFFENDER_DIR = REPO_ROOT.parent / "database"
 REPEAT_OFFENDER_STORIES = [
-    REPO_ROOT.parent / "database" / "data" / "stories.csv",
-    REPO_ROOT.parent / "database" / "data" / "backfill" / "stories.csv",
+    REPEAT_OFFENDER_DIR / "data" / "stories.csv",
+    REPEAT_OFFENDER_DIR / "data" / "backfill" / "stories.csv",
 ]
+
+
+def _repeat_offender_config():
+    """That database's config module, loaded under its own name: both folders
+    have a config.py, and its rules (outcome wording, strict threshold,
+    trusted outlets, vocabularies) must be read from one place, not copied."""
+    spec = importlib.util.spec_from_file_location(
+        "repeat_offender_config", REPEAT_OFFENDER_DIR / "pipeline" / "config.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_RO = _repeat_offender_config()
+STORED_OUTCOME_RE = _RO.STORED_OUTCOME_RE        # arrested, charged, convicted...
+STRICT_MIN_ARRESTS = _RO.STRICT_MIN_ARRESTS
+STRICT_MIN_CONVICTIONS = _RO.STRICT_MIN_CONVICTIONS
+STRICT_MIN_FELONY_CONVICTIONS = _RO.STRICT_MIN_FELONY_CONVICTIONS
+NEW_OFFENSE_TYPES = _RO.NEW_OFFENSE_TYPES
+OFFENSE_SEVERITIES = _RO.OFFENSE_SEVERITIES
+RELEASE_STATUSES = _RO.RELEASE_STATUSES
+TRUSTED_OUTLETS = _RO.TRUSTED_OUTLETS
+OFFENDER_CATEGORIES = _RO.OFFENDER_CATEGORIES
 
 # Same models as the repeat-offender pipeline: bulk extraction, not judgment.
 TRIAGE_MODEL = "claude-haiku-4-5"
@@ -226,12 +262,42 @@ INCIDENT_FORMS = [
 # System-contact signals. Each is true only when the article says so, with a
 # verbatim quote. prior_hospital_discharge covers any prior psychiatric
 # hospitalization: someone hospitalized before the incident was discharged.
+# edp_call is a police response to an "emotionally disturbed person" call;
+# crisis_call is any other crisis call, welfare check or standoff.
+# mh_history is a stated history of mental illness before the incident;
+# psych_medication is any mention of psychiatric medication (medication_lapse
+# is the narrower "had stopped taking it").
 SIGNAL_FIELDS = [
     "prior_hospital_discharge", "prior_custody_release", "police_brought_for_eval",
-    "prior_police_contact", "prior_arrests", "competency", "aot", "crisis_call",
-    "family_sought_help", "medication_lapse", "treatment_refusal", "homeless",
+    "prior_police_contact", "prior_arrests", "competency", "aot", "edp_call", "crisis_call",
+    "family_sought_help", "medication_lapse", "psych_medication", "treatment_refusal",
+    "homeless", "mh_history", "diagnosis_named",
+]
+
+# The inclusion rule's "earlier system contact": any one of these, quoted.
+# Not on their own: competency (usually the current case), crisis_call (usually
+# the call that started this incident) and homeless. A stated prior record
+# (counts or named priors) or release status from an earlier case also counts.
+QUALIFYING_SIGNALS = [
+    "prior_hospital_discharge", "prior_custody_release", "police_brought_for_eval",
+    "prior_police_contact", "prior_arrests", "aot", "edp_call", "family_sought_help",
+    "medication_lapse", "psych_medication", "treatment_refusal", "mh_history",
     "diagnosis_named",
 ]
+
+# The repeat-offender database's prior-record fields, with its definitions and
+# count checks, so a card can show "12 prior arrests" where the article says so.
+PRIOR_RECORD_FIELDS = [
+    "prior_count_arrests", "prior_count_convictions", "prior_count_felony_convictions",
+    "prior_offenses", "prior_evidence_quote",
+    "release_status", "release_evidence_quote", "releasing_jurisdiction",
+]
+PRIOR_COUNT_FIELDS = PRIOR_RECORD_FIELDS[:3]
+
+# How each article in an incident was used (incidents.py). The first report
+# is primary; the first report from a second outlet is always kept as the
+# check; any later one is kept only if it adds something the incident lacks.
+CONTRIBUTIONS = ["primary", "corroboration", "context", "redundant"]
 
 FAILURE_POINTS = [
     "premature discharge", "no discharge plan", "bed unavailable",
@@ -252,11 +318,14 @@ _CODED = [
     "incident_date", "city", "state",
     "subject_name", "subject_key", "age", "sex",
     "subject_role", "other_party", "incident_form", "fatality", "violence",
-    # Kept, not excluded: the criminal-offending restrictions decide later.
     "killed_by_police",
+    # The offense the subject was arrested for or accused of, in the
+    # repeat-offender vocabulary; blank when none (subject harmed, crisis only).
+    "new_offense_type", "new_offense_severity",
     *SIGNAL_FIELDS,
     "diagnoses", "days_since_release",
     "mh_evidence_quote", "signal_evidence",
+    *PRIOR_RECORD_FIELDS,
     "failure_point", "responsible_system", "evidence_tier",
     "outcome", "summary",
 ]
@@ -266,19 +335,36 @@ ARTICLE_COLUMNS = [
     "source_name", "source_url", "additional_sources",
     "confidence", "trigger_phrases", "repeat_offender_ids",
     "coded_by", "review_note",
-    # Review. accepted = the right general type of story.
+    # Review, a spot-check: rejected keeps the article out of incidents.
     "review_status", "reviewed_date",
-    # Set when Claude finds an accepted article does not qualify (outside the
-    # US, under 18, not a specific incident): it stays accepted, out of incidents.
+    # Set when Claude finds an article does not qualify (outside the US,
+    # under 18, not a specific incident): it stays out of incidents.
     "excluded_reason",
-    "incident_id",   # the incident this article was grouped into
+    "incident_id",     # the incident this article was grouped into
+    "contribution",    # CONTRIBUTIONS: how the incident used it
+    "added_info",      # what it added that the incident lacked
 ]
 
 INCIDENT_COLUMNS = [
     "id", *_CODED,
     "source_name", "source_url", "additional_sources",
     "article_ids", "article_count",
+    "redundant_article_ids",   # same incident, nothing new: not merged or cited
     "confidence", "repeat_offender_ids",
+    # The inclusion rule (rules.py), and why.
+    "qualifies_smi", "qualify_note",
+    # The repeat-offender strict threshold on the counts, and whether the
+    # incident meets that database's rules as a whole (reverse cross-listing).
+    "qualifies_strict", "repeat_offender_rules",
+    "corroboration_checked",   # date the second-source search last ran
+    "offender_category", "category_reason",   # set by ../database categorize.py
+]
+
+SUBJECT_COLUMNS = [
+    "subject_key", "subject_name", "state", "incident_ids", "incident_count",
+    "qualifying_incident_count", "first_incident_date", "last_incident_date",
+    "latest_prior_arrests", "latest_prior_convictions", "latest_prior_felony_convictions",
+    "signals", "diagnoses", "repeat_offender_ids",
 ]
 
 REVIEW_STATUSES = ["pending", "flagged", "accepted", "rejected"]

@@ -10,6 +10,8 @@ on:
     paths:
       - "database/pipeline/build_exports.py"
       - "database/data/**"
+      - "smi/data/incidents.csv"
+      - "smi/data/removed_incidents.csv"
   workflow_dispatch:
 
 permissions:

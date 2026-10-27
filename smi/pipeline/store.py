@@ -1,5 +1,5 @@
-"""Read/write helpers for the articles and incidents CSVs, the seen-URL cache,
-the harvest windows, and subject keys."""
+"""Read/write helpers for the articles, incidents and subjects CSVs, the
+seen-URL cache, the harvest windows, and subject keys."""
 
 import csv
 import json
@@ -8,8 +8,9 @@ import unicodedata
 from datetime import date
 from pathlib import Path
 
-from config import (ARTICLE_COLUMNS, ARTICLES_CSV, HARVEST_WINDOWS_JSON, INCIDENT_COLUMNS,
-                    INCIDENTS_CSV, SEEN_URLS_JSON, SIGNAL_FIELDS)
+from config import (ARTICLE_COLUMNS, ARTICLES_CSV, CROSSLIST_CHECKED_JSON, HARVEST_WINDOWS_JSON,
+                    INCIDENT_COLUMNS, INCIDENTS_CSV, REMOVED_INCIDENTS_CSV, SEEN_URLS_JSON,
+                    SIGNAL_FIELDS, SUBJECT_COLUMNS, SUBJECTS_CSV)
 
 _SUFFIXES = {"jr", "sr", "ii", "iii", "iv", "v"}
 
@@ -58,6 +59,32 @@ def load_incidents() -> list[dict]:
 
 def save_incidents(rows: list[dict]) -> None:
     save_rows(rows, INCIDENTS_CSV, INCIDENT_COLUMNS)
+
+
+def save_subjects(rows: list[dict]) -> None:
+    save_rows(rows, SUBJECTS_CSV, SUBJECT_COLUMNS)
+
+
+REMOVED_COLUMNS = INCIDENT_COLUMNS + ["removed_date", "removed_reason"]
+
+
+def load_removed_incidents() -> list[dict]:
+    return load_rows(REMOVED_INCIDENTS_CSV)
+
+
+def save_removed_incidents(rows: list[dict]) -> None:
+    save_rows(rows, REMOVED_INCIDENTS_CSV, REMOVED_COLUMNS)
+
+
+def load_crosslist_checked() -> set[str]:
+    if not CROSSLIST_CHECKED_JSON.exists():
+        return set()
+    return set(json.loads(CROSSLIST_CHECKED_JSON.read_text(encoding="utf-8")))
+
+
+def save_crosslist_checked(ids: set[str]) -> None:
+    CROSSLIST_CHECKED_JSON.parent.mkdir(parents=True, exist_ok=True)
+    CROSSLIST_CHECKED_JSON.write_text(json.dumps(sorted(ids, key=int), indent=0), encoding="utf-8")
 
 
 ARTICLE_PREFIX = "SMI-"
@@ -122,7 +149,17 @@ def _evidence(quotes: dict[str, str]) -> str:
 
 
 _UNREVIEWED = {"review_status": "pending", "reviewed_date": "", "excluded_reason": "",
-               "incident_id": ""}
+               "incident_id": "", "contribution": "", "added_info": ""}
+
+
+def _int_str(v) -> str:
+    return "" if v is None else str(int(v))
+
+
+_NO_RECORD = {"prior_count_arrests": "", "prior_count_convictions": "",
+              "prior_count_felony_convictions": "", "prior_offenses": "", "prior_evidence_quote": "",
+              "release_status": "none stated", "release_evidence_quote": "",
+              "releasing_jurisdiction": ""}
 
 
 def claude_fields(cls, candidate: dict) -> dict:
@@ -142,11 +179,21 @@ def claude_fields(cls, candidate: dict) -> dict:
         "fatality": _b(cls.fatality),
         "violence": _b(cls.violence),
         "killed_by_police": _b(cls.killed_by_police),
+        "new_offense_type": cls.new_offense_type or "",
+        "new_offense_severity": cls.new_offense_severity or "",
         **{f: _b(f in quotes) for f in SIGNAL_FIELDS},
         "diagnoses": cls.diagnoses or "",
         "days_since_release": "" if cls.days_since_release is None else str(cls.days_since_release),
         "mh_evidence_quote": cls.mh_evidence_quote or "",
         "signal_evidence": _evidence(quotes),
+        "prior_count_arrests": _int_str(cls.prior_count_arrests),
+        "prior_count_convictions": _int_str(cls.prior_count_convictions),
+        "prior_count_felony_convictions": _int_str(cls.prior_count_felony_convictions),
+        "prior_offenses": cls.prior_offenses or "",
+        "prior_evidence_quote": cls.prior_evidence_quote or "",
+        "release_status": cls.release_status,
+        "release_evidence_quote": cls.release_evidence_quote or "",
+        "releasing_jurisdiction": cls.releasing_jurisdiction or "",
         "failure_point": cls.failure_point or "",
         "responsible_system": cls.responsible_system or "",
         "evidence_tier": cls.evidence_tier,
@@ -192,12 +239,14 @@ def make_candidate_row(row_id: int, coding: dict, candidate: dict) -> dict:
         "fatality": _b(coding["fatality"]),
         "violence": _b(coding["violence"]),
         "killed_by_police": _b(coding.get("killed_by_police")),
+        "new_offense_type": "", "new_offense_severity": "",
         **{f: _b(f in quotes) for f in SIGNAL_FIELDS},
         "diagnoses": "; ".join(coding["diagnoses"]),
         "days_since_release": "" if coding["days_since_release"] is None
                               else str(coding["days_since_release"]),
         "mh_evidence_quote": coding.get("mh_sentence", ""),
         "signal_evidence": _evidence(quotes),
+        **_NO_RECORD,   # counts and release status need Claude and the count checks
         "failure_point": "", "responsible_system": "", "evidence_tier": "",
         "outcome": "",
         "summary": candidate.get("title", ""),

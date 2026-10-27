@@ -9,10 +9,14 @@ from datetime import datetime
 import pytest
 
 import config
+import corroborate
+import crosslist
 import incidents
 import process
 import review
+import rules
 import smi_coding
+import validate
 from classify import IncidentClassification, check_evidence, days_in_text, parse_classification
 from dedupe import DedupeResult, merge_into, obvious_same_incident
 from link import link_repeat_offenders
@@ -406,14 +410,20 @@ def test_incidents_group_reports_of_one_incident(monkeypatch):
     articles = [_coded(1, age=None), _coded(2), _coded(3, subject_name="Other Person", city="Salem"),
                 _coded(4, status="pending"), _coded(5, status="rejected")]
     articles[1]["killed_by_police"] = "true"
-    rows, counts = incidents.build_incidents(articles)
-    assert counts == {"articles": 3, "incidents": 2, "grouped": 1, "new": 2}
+    rows, counts, gone = incidents.build_incidents(articles)
+    assert counts == {"articles": 4, "incidents": 2, "grouped": 2, "new": 2, "qualifying": 2,
+                      "redundant": 1, "removed": 0} and gone == []
     first = next(r for r in rows if "SMI-000001" in r["article_ids"])
+    # 2 is the second outlet (kept as the check); 4 repeats what 1 and 2 said.
     assert first["article_ids"] == "SMI-000001 SMI-000002" and first["article_count"] == "2"
+    assert first["redundant_article_ids"] == "SMI-000004"
     assert first["additional_sources"] == "https://site2.com/story"
     assert first["age"] == "46" and first["killed_by_police"] == "true"
-    assert articles[0]["incident_id"] == articles[1]["incident_id"] == first["id"]
-    assert articles[3]["incident_id"] == "" and set(rows[0]) == set(config.INCIDENT_COLUMNS)
+    assert [a["contribution"] for a in articles] == ["primary", "corroboration", "primary",
+                                                     "redundant", ""]
+    assert articles[0]["incident_id"] == articles[1]["incident_id"] == articles[3]["incident_id"]
+    assert articles[4]["incident_id"] == "" and set(rows[0]) == set(config.INCIDENT_COLUMNS)
+    assert first["qualifies_smi"] == "yes" and first["qualify_note"] == "prior_hospital_discharge"
 
 
 def test_incidents_skip_excluded_and_phrasebook_and_keep_ids(monkeypatch):
@@ -423,12 +433,113 @@ def test_incidents_skip_excluded_and_phrasebook_and_keep_ids(monkeypatch):
     excluded = _coded(8)
     excluded["excluded_reason"] = "state 'ON' is not a US state"
     articles = [_coded(1), pb, excluded]
-    rows, _ = incidents.build_incidents(articles)
+    rows, _, _ = incidents.build_incidents(articles)
     assert len(rows) == 1 and rows[0]["article_ids"] == "SMI-000001"
     first_id = rows[0]["id"]
     articles.append(_coded(2, subject_name="Other Person", city="Salem"))
-    rows, counts = incidents.build_incidents(articles)
+    rows, counts, _ = incidents.build_incidents(articles, previous=rows)
     assert counts["new"] == 1 and articles[0]["incident_id"] == first_id   # stable on rebuild
+
+
+def _report(n: int, host: str, day: int, **signals) -> dict:
+    """An article about the Tyler Example shooting from `host`, published on
+    day `day`, stating the given signals (field -> quote)."""
+    diagnoses = signals.pop("diagnoses", None)
+    row = make_row(n, _cls(signal_quotes=signals, diagnoses=diagnoses, days_since_release=None),
+                   {**CAND, "url": f"https://{host}/story{n}", "source": host,
+                    "published": f"2026-05-{day:02d}"})
+    return row
+
+
+def test_later_articles_are_kept_only_for_new_information(monkeypatch):
+    """The five-article example: hospitalization; a named diagnosis (second
+    outlet); family pleas; a repeat of the first and third (nothing new);
+    a prior arrest."""
+    monkeypatch.setattr(incidents, "link_repeat_offenders", lambda rows: 0)
+    hosp = "He had been hospitalized several times before the shooting, police said."
+    family = "His mother had begged doctors to keep him in the hospital last spring."
+    articles = [
+        _report(1, "a.com", 12, prior_hospital_discharge=hosp),
+        _report(2, "b.com", 13, diagnosis_named="He had been diagnosed with schizophrenia as a teen.",
+                diagnoses="schizophrenia"),
+        _report(3, "c.com", 14, family_sought_help=family),
+        _report(4, "d.com", 15, prior_hospital_discharge=hosp, family_sought_help=family),
+        _report(5, "e.com", 16, prior_arrests="He had been arrested on assault charges in 2021."),
+    ]
+    rows, counts, _ = incidents.build_incidents(articles)
+    assert len(rows) == 1 and counts["redundant"] == 1
+    r = rows[0]
+    assert [a["contribution"] for a in articles] == ["primary", "corroboration", "context",
+                                                     "redundant", "context"]
+    assert articles[2]["added_info"] == "family_sought_help"
+    assert articles[4]["added_info"] == "prior_arrests"
+    assert r["article_ids"] == "SMI-000001 SMI-000002 SMI-000003 SMI-000005"
+    assert r["redundant_article_ids"] == "SMI-000004"
+    assert "d.com" not in r["additional_sources"]
+    for f in ("prior_hospital_discharge", "diagnosis_named", "family_sought_help", "prior_arrests"):
+        assert r[f] == "true", f
+    assert r["diagnoses"] == "schizophrenia"
+    assert "[https://e.com/story5]" in r["signal_evidence"]
+
+
+def test_second_outlet_is_kept_even_with_nothing_new(monkeypatch):
+    monkeypatch.setattr(incidents, "link_repeat_offenders", lambda rows: 0)
+    same = "He had been hospitalized several times before the shooting, police said."
+    one = [_report(1, "wxyz.com", 12, prior_hospital_discharge=same),
+           _report(2, "wxyz.com", 13, prior_hospital_discharge=same),       # same outlet: no check
+           _report(3, "kare11.com", 14, prior_hospital_discharge=same)]     # second outlet: the check
+    incidents.build_incidents(one)
+    assert [a["contribution"] for a in one] == ["primary", "redundant", "corroboration"]
+    # A trusted first outlet needs no second one: a repeat adds nothing.
+    trusted = [_report(1, "nytimes.com", 12, prior_hospital_discharge=same),
+               _report(2, "kare11.com", 13, prior_hospital_discharge=same)]
+    incidents.build_incidents(trusted)
+    assert [a["contribution"] for a in trusted] == ["primary", "redundant"]
+
+
+def test_removed_incident_ids_are_never_reused(monkeypatch):
+    monkeypatch.setattr(incidents, "link_repeat_offenders", lambda rows: 0)
+    articles = [_coded(1)]
+    rows, _, _ = incidents.build_incidents(articles)
+    assert rows[0]["id"] == "INC-000001"
+    articles[0]["review_status"] = "rejected"
+    articles.append(_coded(2, subject_name="Other Person", city="Salem"))
+    rows, counts, gone = incidents.build_incidents(articles, previous=rows)
+    assert [g["id"] for g in gone] == ["INC-000001"] and counts["removed"] == 1
+    assert gone[0]["removed_reason"] and rows[0]["id"] == "INC-000002"
+    rows, _, _ = incidents.build_incidents(articles + [_coded(3, subject_name="Third Person")],
+                                           previous=rows, removed=gone)
+    assert sorted(r["id"] for r in rows) == ["INC-000002", "INC-000003"]
+
+
+def test_rebuild_keeps_corroboration_and_category(monkeypatch):
+    monkeypatch.setattr(incidents, "link_repeat_offenders", lambda rows: 0)
+    articles = [_coded(1, prior_count_arrests=12,
+                       prior_evidence_quote="He has a criminal history spanning two decades.")]
+    rows, _, _ = incidents.build_incidents(articles)
+    assert rows[0]["repeat_offender_rules"] == "yes"
+    rows[0].update(corroboration_checked="2026-10-27", offender_category="violent",
+                   category_reason="two assault convictions")
+    rows, _, _ = incidents.build_incidents(articles, previous=rows)
+    assert rows[0]["corroboration_checked"] == "2026-10-27" and rows[0]["offender_category"] == "violent"
+
+
+def test_subjects_table():
+    a = {"subject_key": "example_tyler_MA", "subject_name": "Tyler Example", "state": "MA",
+         "id": "INC-000002", "incident_date": "2026-05-11", "qualifies_smi": "yes",
+         "prior_count_arrests": "12", "prior_hospital_discharge": "true", "diagnoses": "schizophrenia",
+         "repeat_offender_ids": "1234"}
+    b = dict(a, id="INC-000001", incident_date="2025-01-02", qualifies_smi="no",
+             prior_count_arrests="9", prior_hospital_discharge="false", aot="true",
+             diagnoses="bipolar disorder", subject_name="Tyler J. Example")
+    rows = incidents.build_subjects([a, b, {"subject_key": "", "id": "INC-000003"}])
+    assert len(rows) == 1
+    s = rows[0]
+    assert s["incident_ids"] == "INC-000001 INC-000002" and s["incident_count"] == "2"
+    assert s["qualifying_incident_count"] == "1" and s["latest_prior_arrests"] == "12"
+    assert s["subject_name"] == "Tyler J. Example" and s["signals"] == "prior_hospital_discharge aot"
+    assert s["diagnoses"] == "bipolar disorder; schizophrenia" and s["repeat_offender_ids"] == "1234"
+    assert set(s) == set(config.SUBJECT_COLUMNS)
 
 
 # --- review -----------------------------------------------------------------
@@ -457,3 +568,222 @@ def test_review_page_renders():
 def test_reference_set_is_present():
     with open(config.REFERENCE_CSV, newline="", encoding="utf-8") as f:
         assert len(list(csv.DictReader(f))) == 274
+
+
+# --- the inclusion rule -----------------------------------------------------
+
+QUALIFYING = {"state": "MA", "age": "46", "subject_role": "subject_accused", "outcome": "charged",
+              "violence": "false", "fatality": "false", "killed_by_police": "false",
+              "prior_hospital_discharge": "true"}
+
+
+@pytest.mark.parametrize("change,ok,note", [
+    ({}, True, "prior_hospital_discharge"),
+    ({"state": ""}, False, "no US state"),
+    ({"state": "ON"}, False, "no US state"),
+    ({"age": "17"}, False, "under 18"),
+    ({"age": ""}, True, ""),
+    ({"prior_hospital_discharge": "false", "edp_call": "true"}, True, "edp_call"),
+    ({"prior_hospital_discharge": "false", "mh_history": "true"}, True, "mh_history"),
+    ({"prior_hospital_discharge": "false", "psych_medication": "true"}, True, "psych_medication"),
+    ({"prior_hospital_discharge": "false", "family_sought_help": "true"}, True, "family_sought_help"),
+    ({"prior_hospital_discharge": "false", "police_brought_for_eval": "true"}, True, ""),
+    ({"prior_hospital_discharge": "false", "prior_police_contact": "true"}, True, ""),
+    ({"prior_hospital_discharge": "false", "diagnosis_named": "true"}, True, ""),
+    ({"prior_hospital_discharge": "false", "prior_evidence_quote": "He has 12 prior arrests."}, True,
+     "prior record"),
+    ({"prior_hospital_discharge": "false", "release_status": "probation"}, True, "release status"),
+    # Not earlier contacts on their own.
+    ({"prior_hospital_discharge": "false", "crisis_call": "true"}, False, "no earlier system contact"),
+    ({"prior_hospital_discharge": "false", "competency": "true"}, False, "no earlier system contact"),
+    ({"prior_hospital_discharge": "false", "homeless": "true"}, False, "no earlier system contact"),
+    # Harm: violence or a death without an arrest; otherwise an arrest for anything.
+    ({"outcome": "hospitalized"}, False, "no violence, death or arrest"),
+    ({"outcome": "hospitalized", "violence": "true"}, True, ""),
+    ({"outcome": "", "fatality": "true"}, True, ""),
+    ({"outcome": "arrested", "violence": "false"}, True, ""),
+    # The subject harmed counts too: a police killing.
+    ({"subject_role": "subject_victim", "killed_by_police": "true", "fatality": "true",
+      "outcome": "died"}, True, ""),
+])
+def test_inclusion_rule(change, ok, note):
+    got, why = rules.qualifies_smi({**QUALIFYING, **change})
+    assert got is ok and note in why
+
+
+@pytest.mark.parametrize("change,meets", [
+    ({}, True),
+    ({"prior_count_arrests": "4"}, False),                     # under the strict threshold
+    ({"prior_count_arrests": "", "prior_count_felony_convictions": "3"}, True),
+    ({"killed_by_police": "true"}, False),
+    ({"subject_role": "subject_victim"}, False),
+    ({"outcome": "hospitalized", "violence": "true"}, False),  # qualifies here, but no arrest
+    ({"state": ""}, False),                                     # not a qualifying incident
+])
+def test_repeat_offender_rules(change, meets):
+    row = {**QUALIFYING, "prior_count_arrests": "12", "prior_evidence_quote": "q", **change}
+    rules.apply_rules(row)
+    assert (row["repeat_offender_rules"] == "yes") is meets
+
+
+def test_category_is_cleared_outside_the_repeat_offender_rules():
+    row = {**QUALIFYING, "offender_category": "violent", "category_reason": "r"}
+    rules.apply_rules(row)
+    assert row["repeat_offender_rules"] == "no" and row["offender_category"] == ""
+
+
+def test_codebook_rule_sets():
+    assert set(config.QUALIFYING_SIGNALS) < set(config.SIGNAL_FIELDS)
+    assert not {"competency", "crisis_call", "homeless"} & set(config.QUALIFYING_SIGNALS)
+    assert {"edp_call", "mh_history", "psych_medication"} <= set(config.QUALIFYING_SIGNALS)
+    assert set(config.PRIOR_RECORD_FIELDS) <= set(config.ARTICLE_COLUMNS)
+    # Read from the repeat-offender config, not copied.
+    assert "probation" in config.RELEASE_STATUSES and "nytimes.com" in config.TRUSTED_OUTLETS
+    assert config.STRICT_MIN_FELONY_CONVICTIONS == 3
+
+
+# --- new signals and the prior record ------------------------------------------
+
+def test_phrasebook_new_signals():
+    r = smi_coding.code("Officers responded to a call about an emotionally disturbed person. "
+                        "He had a long history of mental illness and was prescribed antipsychotic "
+                        "medication, his sister said.")
+    assert {"edp_call", "mh_history", "psych_medication"} <= set(r["signals"])
+    assert "crisis_call" not in r["signals"]          # an EDP call is its own signal
+    assert "psych_medication" in smi_coding.code(ARTICLE)["signals"]   # "stopped taking his medication"
+
+
+RECORD = ("Tyler Example, 46, was charged with assault. Court records show he had been arrested "
+          "12 times since 2010, including for robbery. He was on probation for a 2023 assault at "
+          "the time, prosecutors said. His family said he had schizophrenia and had stopped taking "
+          "his medication weeks earlier.")
+COUNT_QUOTE = "Court records show he had been arrested 12 times since 2010, including for robbery."
+RELEASE_QUOTE = "He was on probation for a 2023 assault at the time, prosecutors said."
+LAPSE_QUOTE = "His family said he had schizophrenia and had stopped taking his medication weeks earlier."
+
+
+def _record_cls(**kw) -> IncidentClassification:
+    base = dict(mh_evidence_quote=LAPSE_QUOTE, signal_quotes={"medication_lapse": LAPSE_QUOTE},
+                days_since_release=None, prior_count_arrests=12, prior_offenses="robbery",
+                prior_evidence_quote=COUNT_QUOTE, release_status="probation",
+                release_evidence_quote=RELEASE_QUOTE)
+    base.update(kw)
+    return _cls(**base)
+
+
+def test_prior_record_is_kept_and_sets_its_signals():
+    cls = _record_cls()
+    problem, dropped = check_evidence(cls, RECORD)
+    assert problem is None and dropped == []
+    assert cls.prior_count_arrests == 12 and cls.release_status == "probation"
+    assert cls.signal_quotes["prior_arrests"] == COUNT_QUOTE
+    assert cls.signal_quotes["prior_custody_release"] == RELEASE_QUOTE
+    assert "psych_medication" in cls.signal_quotes        # implied by medication_lapse
+    row = make_row(1, cls, CAND)
+    assert row["prior_count_arrests"] == "12" and row["release_status"] == "probation"
+    assert row["prior_arrests"] == "true"
+
+
+def test_unverified_prior_record_is_dropped_not_rejected():
+    cls = _record_cls(prior_count_arrests=15)                    # not printed
+    problem, dropped = check_evidence(cls, RECORD)
+    assert problem is None and cls.prior_count_arrests is None and "prior_count_arrests=15" in dropped
+    cls = _record_cls(prior_evidence_quote="He has a lengthy record of arrests for many crimes.")
+    problem, dropped = check_evidence(cls, RECORD)
+    assert problem is None and "prior_record" in dropped
+    assert cls.prior_count_arrests is None and cls.prior_offenses is None
+    assert "prior_arrests" not in cls.signal_quotes
+    cls = _record_cls(release_evidence_quote=None)
+    check_evidence(cls, RECORD)
+    assert cls.release_status == "none stated" and "prior_custody_release" not in cls.signal_quotes
+
+
+def test_count_in_text_matches_the_repeat_offender_check():
+    from classify import count_in_text
+    assert count_in_text(12, "arrested a dozen times")
+    assert count_in_text(3, "his fourth offense")                # Nth offense: N-1 priors
+    assert not count_in_text(7, "arrested 12 times")
+
+
+def test_a_matched_second_source_needs_no_mental_health_quote():
+    cls = _cls(mh_evidence_quote="Not a sentence from this article at all, really.", same_incident=True)
+    problem, _ = check_evidence(cls, ARTICLE, matched=True)
+    assert problem is None and cls.mh_evidence_quote is None
+    cls = _cls(mh_evidence_quote="Not a sentence from this article at all, really.")
+    assert check_evidence(cls, ARTICLE)[0] == "mh_evidence_quote not found in article"
+
+
+# --- second sources, with search and model stubbed ------------------------------
+
+def test_corroborate_adds_matching_reports(monkeypatch):
+    incident = {"id": "INC-000001", "subject_name": "Tyler Example", "city": "Cambridge",
+                "state": "MA", "incident_date": "2026-05-11", "qualifies_smi": "yes",
+                "source_url": "https://site1.com/story", "additional_sources": "",
+                "corroboration_checked": ""}
+    articles = [_coded(1)]
+    articles[0]["incident_id"] = "INC-000001"
+    hits = [{"url": "https://site1.com/other", "title": "same outlet", "source": "Site1", "published": "2026-05-12"},
+            {"url": "https://b.com/match", "title": "Man charged", "source": "B", "published": "2026-05-12"},
+            {"url": "https://c.com/other", "title": "Different man", "source": "C", "published": "2026-05-12"},
+            {"url": "https://www.example.co.uk/x", "title": "UK", "source": "UK", "published": "2026-05-12"}]
+    monkeypatch.setattr(corroborate, "google_news_search", lambda q, s, e: [dict(h) for h in hits])
+    monkeypatch.setattr(corroborate, "fetch_article_text_cached", lambda url: ARTICLE)
+    asked = []
+    family = "His family said he had mental health issues and had stopped taking his medication."
+
+    def fake_classify(client, cand, text, coding, incident=None):
+        asked.append(cand["url"])
+        assert incident["id"] == "INC-000001"
+        return _cls(same_incident=cand["url"] == "https://b.com/match", mh_evidence_quote=None,
+                    signal_quotes={"family_sought_help": family})
+    monkeypatch.setattr(corroborate, "classify_article", fake_classify)
+    c = corroborate.corroborate(object(), [incident], articles, set())
+    assert asked == ["https://b.com/match", "https://c.com/other"]   # same outlet and .co.uk skipped
+    assert c == {"checked": 1, "matched": 1, "articles_added": 1, "throttled": False}
+    assert incident["corroboration_checked"]
+    new = articles[-1]
+    assert new["incident_id"] == "INC-000001" and new["source_url"] == "https://b.com/match"
+    assert new["coded_by"] == "claude" and new["family_sought_help"] == "true"
+    monkeypatch.setattr(incidents, "link_repeat_offenders", lambda rows: 0)
+    rows, _, _ = incidents.build_incidents(articles)
+    assert new["contribution"] == "corroboration" and rows[0]["family_sought_help"] == "true"
+    assert not corroborate.needs_search(incident)      # stamped: not searched again
+
+
+# --- cross-listing from the repeat-offender database -----------------------------
+
+def test_crosslist_adds_repeat_offender_articles_with_mental_health_language(monkeypatch, tmp_path):
+    p = tmp_path / "stories.csv"
+    with open(p, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=["id", "source_url", "additional_sources", "source_name",
+                                          "summary", "incident_date"])
+        w.writeheader()
+        w.writerow({"id": "7", "source_url": "https://a.com/mh", "additional_sources": "https://b.com/plain",
+                    "source_name": "A", "summary": "Man charged", "incident_date": "2026-05-11"})
+        w.writerow({"id": "8", "source_url": "https://b.com/robbery", "source_name": "B",
+                    "summary": "Robbery", "incident_date": "2026-05-11"})
+    robbery = "Police arrested a man after a store robbery. " * 20
+    texts = {"https://a.com/mh": ARTICLE, "https://b.com/plain": robbery, "https://b.com/robbery": robbery}
+    monkeypatch.setattr(crosslist, "fetch_article_text_cached", texts.get)
+    articles, checked = [], set()
+    c = crosslist.crosslist(articles, checked, [p], dry_run=True)
+    assert c["stories_with_mh"] == 1 and articles == [] and checked == set()
+    c = crosslist.crosslist(articles, checked, [p])
+    assert c == {"stories": 2, "stories_with_mh": 1, "articles_added": 1, "no_text": 0}
+    assert articles[0]["source_url"] == "https://a.com/mh" and articles[0]["coded_by"] == "phrasebook"
+    assert "repeat-offender story 7" in articles[0]["review_note"] and checked == {"7", "8"}
+    assert crosslist.crosslist(articles, checked, [p])["stories"] == 0   # each story read once
+
+
+# --- validation --------------------------------------------------------------------
+
+def test_validation_catches_bad_rows():
+    row = {**QUALIFYING, "signal_evidence": "prior_hospital_discharge: q"}
+    rules.apply_rules(row)
+    assert validate.incident_problems(row) == []
+    assert any("disagrees" in p for p in validate.incident_problems(dict(row, qualifies_smi="no")))
+    assert any("no quoted evidence" in p for p in validate.incident_problems(dict(row, aot="true")))
+    assert any("without prior_evidence_quote" in p
+               for p in validate.coded_problems({"prior_count_arrests": "5"}))
+    assert any("outside the codebook" in p for p in validate.article_problems(
+        {"coded_by": "phrasebook", "review_status": "maybe"}))

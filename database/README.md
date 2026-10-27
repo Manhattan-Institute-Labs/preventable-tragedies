@@ -11,7 +11,8 @@ release, early release, dropped charges).
 
 The backend follows [flock-crime-tracker](https://github.com/CharlesFainLehman/flock-crime-tracker).
 The front end is the site in [`../site/`](../site/), whose `build.py` reads `exports/stories.json`; the pipeline
-writes `exports/stories.json`, `exports/offenders.json`, and `exports/stats.json` for it.
+writes `exports/stories.json`, `exports/offenders.json`, and `exports/stats.json` for it, with the
+serious-mental-illness tracker's incidents ([`../smi/`](../smi/)) merged in (see Offender categories).
 
 Everything here lives in `database/`, and paths below are relative to it. The GitHub Actions
 workflows are in the repo-root `.github/workflows/` and run with `database/` as their working
@@ -143,7 +144,17 @@ quote the sentence it relied on; a `violent` or `petty` answer whose quote isn't
 (or the stored `prior_evidence_quote`), or a `violent` answer with fewer than two violent priors,
 is stored as `unclassified`. Every decision, with its quote, goes to the decision log. New rows
 are categorized in the daily job; `Categorize (manual)` sweeps the database (`recheck` redoes
-every row, e.g. after a rule change). Serious mental illness is not categorized yet.
+every row, e.g. after a rule change).
+
+**Serious mental illness** is the third category, from the tracker in [`../smi/`](../smi/),
+which runs in the same daily job with its own inclusion rule (see its README). In `exports/`,
+every record has `categories`: its `offender_category` (or `pending`), plus `smi` when the SMI
+tracker has the same incident (a shared source article, or the same person key within 21
+days). An SMI incident with no story here becomes its own record, id `SMI_ID_BASE` (2,000,000)
+plus its number, with `smi` first. `categorize.py` also categorizes SMI incidents that meet
+this database's rules (`repeat_offender_rules` in `../smi/data/incidents.csv`), so those show
+under both. SMI incidents never enter `data/stories.csv` or `offenders.csv`; they are merged
+only in `exports/`, under the same publication rule.
 
 ## Caveats
 
