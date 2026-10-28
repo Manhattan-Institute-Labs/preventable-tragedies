@@ -1,15 +1,15 @@
 {
- "updated": "2026-10-27",
+ "updated": "2026-10-28",
  "stories": 539,
  "stories_strict": 445,
  "by_category": {
   "violent": 175,
-  "unclassified": 141,
-  "petty": 127,
-  "smi": 97,
+  "unclassified": 140,
+  "petty": 128,
+  "smi": 128,
   "pending": 1
  },
- "offenders": 423,
+ "offenders": 424,
  "offenders_multiple_incidents": 8,
  "by_state": {
   "NY": 123,
@@ -22,11 +22,11 @@
   "WA": 19,
   "OH": 19,
   "NC": 17,
-  "GA": 14,
+  "GA": 13,
+  "UT": 11,
   "SC": 11,
   "AR": 10,
   "PA": 10,
-  "UT": 10,
   "NV": 9,
   "CT": 8,
   "VA": 7,
@@ -69,10 +69,10 @@
   "IL": 19,
   "WA": 18,
   "NC": 16,
-  "GA": 13,
   "MA": 12,
+  "GA": 12,
+  "UT": 11,
   "OH": 11,
-  "UT": 10,
   "AR": 8,
   "NV": 8,
   "SC": 8,
@@ -109,17 +109,17 @@
   "DC": 1
  },
  "by_release_status": {
-  "none stated": 299,
+  "none stated": 300,
   "parole": 65,
   "bail/bond": 56,
-  "probation": 38,
+  "probation": 37,
   "early release": 36,
   "supervised release": 32,
   "pretrial release": 11,
   "charges dropped": 2
  },
  "by_offense_type": {
-  "homicide": 124,
+  "homicide": 123,
   "assault": 94,
   "drug offense": 43,
   "sexual assault": 41,
@@ -133,8 +133,8 @@
   "child abuse": 11,
   "fraud": 9,
   "vehicle theft": 8,
+  "kidnapping": 7,
   "arson": 6,
-  "kidnapping": 6,
   "domestic violence": 4,
   "carjacking": 2
  },
@@ -146,6 +146,7 @@
   "weapons": 20
  },
  "by_month": {
+  "2011-10": 1,
   "2014-09": 1,
   "2014-10": 1,
   "2015-08": 1,
@@ -215,7 +216,7 @@
   "2026-05": 26,
   "2026-06": 13,
   "2026-07": 29,
-  "2026-08": 32,
+  "2026-08": 31,
   "2026-09": 35,
   "2026-10": 23
  }

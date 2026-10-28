@@ -31,5 +31,13 @@
   "gdelt": true,
   "claude": false,
   "new_articles": 164
+ },
+ {
+  "start": "2026-10-27T10:33:45",
+  "end": "2026-10-28T10:33:45",
+  "run": "2026-10-28T10:34:57",
+  "gdelt": false,
+  "claude": true,
+  "new_articles": 2
  }
 ]
