@@ -38,6 +38,7 @@ from config import (CLASSIFY_MODEL, EVIDENCE_TIERS, FAILURE_POINTS, INCIDENT_FOR
                     NEW_OFFENSE_TYPES, OFFENSE_SEVERITIES, OTHER_PARTIES, RELEASE_STATUSES,
                     RESPONSIBLE_SYSTEMS, SIGNAL_FIELDS, STRICT_MIN_ARRESTS, STRICT_MIN_CONVICTIONS,
                     STRICT_MIN_FELONY_CONVICTIONS, SUBJECT_ROLES, US_STATES)
+from diagnoses import clean as clean_diagnoses
 
 SubjectRole = Literal[tuple(SUBJECT_ROLES)]          # type: ignore[valid-type]
 OtherParty = Literal[tuple(OTHER_PARTIES)]           # type: ignore[valid-type]
@@ -205,12 +206,14 @@ An article does NOT qualify if it is:
 - A story with no mental-health indication for the subject. A victim's grief or trauma does not count.
 - Purely about substance use, or primarily about dementia or developmental disability.
 - A story whose subject is under 18.
-- A story about an incident outside the United States.
+- A story about an incident that happened outside the United States, wherever the subject lived: a US resident harmed or killed abroad (after deportation, while travelling) does not qualify.
+- A court-only story: one whose news is a later legal or corrections proceeding about an earlier, already-decided case, such as an execution, a clemency or pardon decision, an appeal, a parole or release hearing, or a civil lawsuit or settlement. Coverage of the incident itself, or of its criminal case from arrest through sentencing, is about the incident and can qualify.
 - A police blotter, arrest log, or list of unrelated bookings.
 
 Field guidance:
+When a story reports a new event and recounts an earlier crime as background, the incident is the new event, and the earlier crime is prior history (prior_arrests, prior_offenses and the prior counts), not the incident.
 - incident_date: date of the incident, as specific as the article allows (YYYY-MM-DD, YYYY-MM or YYYY). Use the publication date only if nothing better is stated.
-- state: two-letter US postal code. Always provide it when the article names or implies any location. Never infer it from the outlet's name: station groups syndicate stories nationally.
+- state: two-letter US postal code of the state where the incident HAPPENED, not where the subject lived. Always provide it when the article names or implies any location. Never infer it from the outlet's name: station groups syndicate stories nationally.
 - subject_name: ONE person, full name as printed. Blank if the article does not name the subject. age: as stated, else blank. sex: M, F or U, for the subject only.
 - other_party: who the other person was. When subject_accused: the person the subject harmed or threatened, or "police" for a crisis response with no one harmed. When subject_victim: the person who harmed the subject. One of: {", ".join(OTHER_PARTIES)}. "partner" includes spouses, girlfriends and boyfriends; "family_parent" is the subject's parent, "family_child" the subject's child; "acquaintance" is someone the subject knew who is not family or a partner (a neighbor, friend, roommate, coworker, landlord); "stranger" is someone the subject did not know. Use "multiple" only for more than one TYPE of party (two strangers are "stranger"). Null when there was no other party or the article does not say.
 - incident_form: the most serious form, one of: {", ".join(INCIDENT_FORMS)}.
@@ -233,7 +236,7 @@ Field guidance:
   homeless: the subject was homeless or living in a shelter or on the street.
   mh_history: the article says the subject had a mental illness, mental-health problems or psychiatric treatment BEFORE this incident ("a long history of mental illness", "had struggled with schizophrenia for years", "had been diagnosed with bipolar disorder", "was being treated for"). Behaviour during the incident, or an evaluation after it, does not count.
   diagnosis_named: the article names a specific disorder (schizophrenia, schizoaffective disorder, bipolar disorder, major depressive disorder, postpartum psychosis, delusional disorder). Generic language ("mental health issues") and symptoms (psychosis, delusions, hearing voices) do NOT count.
-- diagnoses: the disorders the article names, separated by semicolons. Blank if none.
+- diagnoses: the mental disorders the article names, separated by semicolons, in their usual full names ("post-traumatic stress disorder", not "PTSD"). Never a symptom (psychosis, a psychotic episode, mania, delusions, hallucinations), generic wording ("mental illness", "depression"), or a physical condition. Blank if none.
 - days_since_release: whole days between the subject's release (hospital or custody) and the incident, ONLY when the article gives that interval. Hours count as 0.
 - new_offense_type: the most serious offense the subject was arrested for, charged with or accused of in this incident, one of: {", ".join(NEW_OFFENSE_TYPES)}. new_offense_severity: one of {", ".join(OFFENSE_SEVERITIES)}. Both null when the subject is not accused of a crime (the subject was the one harmed, or a crisis with no crime alleged).
 - The subject's PRIOR criminal record and release status, as the article states them:
@@ -253,7 +256,7 @@ Field guidance:
 
 The message may list phrase-book matches: automated keyword hits with the sentence each came from. They are hints, often wrong (the sentence may be about someone else or another event). Include a signal only if the article supports it for THIS subject.
 
-The message may end with a DATABASE RECORD of an incident already in the database. Then set same_incident: true only if the article reports the same person AND the same incident, at any stage (arrest, charging, arraignment, plea, sentencing, a later hearing); false for a different incident or a different person with the same name. Be strict: when the article does not clearly match, say false. When same_incident is true, the article qualifies even if it gives no mental-health indication of its own (leave mh_evidence_quote null then); extract everything it says about the subject.
+The message may end with a DATABASE RECORD of an incident already in the database. Then set same_incident: true only if the article reports the same person AND the same incident, at any stage of its criminal case (arrest, charging, arraignment, competency hearing, trial, plea, sentencing); false for a different incident or a different person with the same name. Be strict: when the article does not clearly match, say false. When same_incident is true, the article qualifies even if it gives no mental-health indication of its own (leave mh_evidence_quote null then); extract everything it says about the subject.
 
 Always give a one-sentence reason for your decision.
 
@@ -459,6 +462,10 @@ def check_evidence(cls: IncidentClassification, text: str,
     dropped = [f for f, q in cls.signal_quotes.items() if not quote_in_text(q, text)]
     for f in dropped:
         del cls.signal_quotes[f]
+    listed, cls.diagnoses = cls.diagnoses, clean_diagnoses(cls.diagnoses) or None
+    if listed and not cls.diagnoses and "diagnosis_named" in cls.signal_quotes:
+        del cls.signal_quotes["diagnosis_named"]    # only symptoms or generic wording
+        dropped.append("diagnosis_named")
     dropped += _check_prior_record(cls, text)
     if "medication_lapse" in cls.signal_quotes:
         cls.signal_quotes.setdefault("psych_medication", cls.signal_quotes["medication_lapse"])
