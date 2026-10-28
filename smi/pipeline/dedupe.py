@@ -2,7 +2,7 @@
 
 Adapted from ../database/pipeline/dedupe.py. Several outlets cover one
 incident, and one person recurs across months (an incident, then a
-competency hearing, then a release decision years later). An article is
+competency hearing, then a sentencing). An article is
 compared against existing incidents for the same subject key (any date) and
 the same state within a date window, and is one of three things:
 
@@ -11,9 +11,11 @@ the same state within a date window, and is one of three things:
   same_person_new_incident -> a new incident that shares the subject_key
   unrelated                -> a new incident
 
-Follow-up coverage of one incident (arrest, competency hearing, plea,
-sentencing, a later release decision) is the same incident. The clear cases
-are decided by rule; Haiku decides the rest.
+Follow-up coverage of one incident's criminal case (arrest, competency
+hearing, plea, sentencing) is the same incident. Later proceedings on a
+decided case (an execution, an appeal, a release hearing, a lawsuit) are
+court-only stories, which the classifier excludes. The clear cases are
+decided by rule; Haiku decides the rest.
 """
 
 from datetime import date, datetime
@@ -138,8 +140,8 @@ def check_duplicate(client: anthropic.Anthropic, new_row: dict,
                 "with serious mental illness. Decide how the new entry relates to the "
                 "existing entries.\n"
                 "- same_incident: the same person and the same incident. Follow-up "
-                "coverage of one incident (arrest, competency hearing, plea, sentencing, "
-                "a later release or commitment decision) is the same incident. Different "
+                "coverage of one incident's criminal case (arrest, competency hearing, "
+                "plea, sentencing) is the same incident. Different "
                 "outlets often report slightly different dates and details for one event.\n"
                 "- same_person_new_incident: clearly the same person, but a different "
                 "incident on a different occasion.\n"

@@ -519,9 +519,10 @@ def test_rebuild_keeps_corroboration_and_category(monkeypatch):
     rows, _, _ = incidents.build_incidents(articles)
     assert rows[0]["repeat_offender_rules"] == "yes"
     rows[0].update(corroboration_checked="2026-10-27", offender_category="violent",
-                   category_reason="two assault convictions")
+                   category_reason="two assault convictions", site_excluded="court-only coverage")
     rows, _, _ = incidents.build_incidents(articles, previous=rows)
     assert rows[0]["corroboration_checked"] == "2026-10-27" and rows[0]["offender_category"] == "violent"
+    assert rows[0]["site_excluded"] == "court-only coverage"   # set by hand, kept by every rebuild
 
 
 def test_subjects_table():
@@ -748,6 +749,8 @@ def test_corroborate_adds_matching_reports(monkeypatch):
     rows, _, _ = incidents.build_incidents(articles)
     assert new["contribution"] == "corroboration" and rows[0]["family_sought_help"] == "true"
     assert not corroborate.needs_search(incident)      # stamped: not searched again
+    off_site = {**incident, "corroboration_checked": "", "site_excluded": "court-only coverage"}
+    assert not corroborate.needs_search(off_site)      # kept off the site: not searched
 
 
 # --- cross-listing from the repeat-offender database -----------------------------
@@ -787,3 +790,71 @@ def test_validation_catches_bad_rows():
                for p in validate.coded_problems({"prior_count_arrests": "5"}))
     assert any("outside the codebook" in p for p in validate.article_problems(
         {"coded_by": "phrasebook", "review_status": "maybe"}))
+
+
+# --- diagnoses, court-only stories, events abroad, removal on review ----------------
+
+import diagnoses
+
+
+def test_diagnoses_are_one_spelling_and_named_disorders_only():
+    assert diagnoses.clean("PTSD; post-traumatic stress disorder; psychosis; Schizophrenia") == \
+        "post-traumatic stress disorder; schizophrenia"
+    assert diagnoses.clean("paranoid schizophrenia; bipolar 1; acute psychosis; multiple sclerosis") == \
+        "schizophrenia; bipolar disorder"
+    assert diagnoses.clean("postpartum depression; depression; mania with psychosis") == "postpartum depression"
+    assert diagnoses.clean("") == "" and diagnoses.clean(None) == ""
+
+
+def test_tidy_drops_diagnosis_named_when_only_symptoms_were_listed():
+    row = {"diagnoses": "psychosis", "diagnosis_named": "true",
+           "signal_evidence": "mh_history: q1 || diagnosis_named: q2"}
+    assert diagnoses.tidy(row)
+    assert row["diagnoses"] == "" and row["diagnosis_named"] == "false"
+    assert row["signal_evidence"] == "mh_history: q1"
+    # A named disorder alongside a symptom keeps the signal.
+    row = {"diagnoses": "psychosis; schizophrenia", "diagnosis_named": "true",
+           "signal_evidence": "diagnosis_named: q"}
+    diagnoses.tidy(row)
+    assert row["diagnoses"] == "schizophrenia" and row["diagnosis_named"] == "true"
+    # Nothing listed: the quoted signal stands.
+    row = {"diagnoses": "", "diagnosis_named": "true", "signal_evidence": "diagnosis_named: q"}
+    assert not diagnoses.tidy(row) and row["diagnosis_named"] == "true"
+
+
+def test_check_evidence_cleans_diagnoses():
+    quote = "His family said he had mental health issues and had stopped taking his medication."
+    cls = _cls(diagnoses="psychosis", signal_quotes={"diagnosis_named": quote})
+    problem, dropped = check_evidence(cls, ARTICLE)
+    assert problem is None and cls.diagnoses is None and "diagnosis_named" in dropped
+    cls = _cls(diagnoses="PTSD; psychosis", signal_quotes={"diagnosis_named": quote})
+    check_evidence(cls, ARTICLE)
+    assert cls.diagnoses == "post-traumatic stress disorder" and "diagnosis_named" in cls.signal_quotes
+
+
+def test_prompt_excludes_court_only_stories_and_events_abroad():
+    from classify import SYSTEM_PROMPT
+    assert "court-only story" in SYSTEM_PROMPT and "execution" in SYSTEM_PROMPT
+    assert "outside the United States, wherever the subject lived" in SYSTEM_PROMPT
+    assert "where the incident HAPPENED" in SYSTEM_PROMPT
+
+
+def test_prompt_treats_an_earlier_crime_recounted_as_background_as_prior_history():
+    from classify import SYSTEM_PROMPT
+    assert "recounts an earlier crime as background, the incident is the new event" in SYSTEM_PROMPT
+
+
+def test_incidents_build_cleans_existing_diagnoses(monkeypatch):
+    monkeypatch.setattr(incidents, "link_repeat_offenders", lambda rows: 0)
+    articles = [_coded(1, diagnoses="PTSD; psychosis")]
+    rows, _, _ = incidents.build_incidents(articles)
+    assert articles[0]["diagnoses"] == rows[0]["diagnoses"] == "post-traumatic stress disorder"
+
+
+def test_incident_removed_on_review_keeps_the_reason(monkeypatch):
+    monkeypatch.setattr(incidents, "link_repeat_offenders", lambda rows: 0)
+    articles = [_coded(1)]
+    rows, _, _ = incidents.build_incidents(articles)
+    articles[0].update(review_status="rejected", review_note="execution, not an incident")
+    rows, counts, gone = incidents.build_incidents(articles, previous=rows)
+    assert rows == [] and gone[0]["removed_reason"] == "removed on review: execution, not an incident"

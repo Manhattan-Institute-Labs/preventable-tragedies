@@ -200,7 +200,7 @@ def sweep_smi(client: anthropic.Anthropic, path=None, limit: int = 0, recheck: b
     with open(path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         fields, rows = reader.fieldnames, list(reader)
-    todo = [r for r in rows if r.get("repeat_offender_rules") == "yes"
+    todo = [r for r in rows if r.get("repeat_offender_rules") == "yes" and not r.get("site_excluded")
             and (recheck or not r.get("offender_category"))]
     if limit:
         todo = todo[:limit]

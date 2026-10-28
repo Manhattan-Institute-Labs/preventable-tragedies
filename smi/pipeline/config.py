@@ -358,6 +358,7 @@ INCIDENT_COLUMNS = [
     "qualifies_strict", "repeat_offender_rules",
     "corroboration_checked",   # date the second-source search last ran
     "offender_category", "category_reason",   # set by ../database categorize.py
+    "site_excluded",   # set by hand: why the incident stays in this file but off the site
 ]
 
 SUBJECT_COLUMNS = [

@@ -49,7 +49,8 @@ class Throttled(RuntimeError):
 
 def needs_search(row: dict) -> bool:
     return (row.get("qualifies_smi") == "yes" and bool(row.get("subject_name"))
-            and not row.get("corroboration_checked") and not publishable(row))
+            and not row.get("corroboration_checked") and not publishable(row)
+            and not row.get("site_excluded"))
 
 
 def build_query(row: dict) -> str:

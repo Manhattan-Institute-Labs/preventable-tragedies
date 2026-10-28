@@ -9,7 +9,8 @@ Outputs:
 
 Every record has `categories`: this database's offender_category ("pending"
 until categorize.py reaches it), plus "smi" when the SMI tracker has the
-same incident and it meets the SMI inclusion rule. An SMI incident with no
+same incident, it meets the SMI inclusion rule, and it is not kept off the
+site by hand (its site_excluded column). An SMI incident with no
 story here is its own record, id SMI_ID_BASE + its number, with "smi" first
 and a violent or petty category too when it meets this database's rules
 (categorize.py). Which side of a harm an SMI subject was on is not exported.
@@ -188,7 +189,12 @@ def build_stats(stories: list[dict], offenders: list[dict]) -> dict:
 
 def build_exports() -> None:
     stories = load_all_stories()
-    smi = [r for r in _csv_rows(SMI_INCIDENTS_CSV) if r.get("qualifies_smi") == "yes"]
+    smi_rows = _csv_rows(SMI_INCIDENTS_CSV)
+    # Kept in the SMI data by hand but off the site (its site_excluded column).
+    off_site = [r for r in smi_rows if r.get("site_excluded")]
+    smi = [r for r in smi_rows if r.get("qualifies_smi") == "yes" and not r.get("site_excluded")]
+    if off_site:
+        print(f"{len(off_site)} SMI incidents kept off the site by hand")
     if REQUIRE_CORROBORATION:
         # Single-source rows wait for the second-source search; they are in
         # the data files but not on the site.
@@ -226,6 +232,8 @@ def build_exports() -> None:
     removed = {r["id"]: {"date": r["removed_date"], "reason": r["removed_reason"]} for r in load_removed()}
     removed.update({str(smi_id(r["id"])): {"date": r["removed_date"], "reason": r["removed_reason"]}
                     for r in _csv_rows(SMI_REMOVED_CSV)})
+    removed.update({str(smi_id(r["id"])): {"date": "", "reason": f"kept off the site: {r['site_excluded']}"}
+                    for r in off_site})
     (EXPORTS_DIR / "removed.json").write_text(json.dumps(removed, ensure_ascii=False), encoding="utf-8")
     stats = build_stats(stories, offenders)
     (EXPORTS_DIR / "stats.json").write_text(json.dumps(stats, indent=1), encoding="utf-8")

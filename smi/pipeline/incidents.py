@@ -3,8 +3,10 @@
     python pipeline/run.py incidents
 
 An article joins an incident when Claude has coded it, Claude did not
-exclude it (outside the US, under 18, not a specific incident), and no
-reviewer rejected it. Review is a spot-check, not a gate.
+exclude it (outside the US, under 18, not a specific incident, court-only),
+and no reviewer rejected it. Review is a spot-check, not a gate. Its
+diagnoses are cleaned on every build (diagnoses.py), so rows coded before a
+change to that list are brought up to date.
 
 Grouping uses the rules in dedupe.py: the same person with nearby dates and
 the same city or form is the same incident without asking a model; with an
@@ -25,8 +27,10 @@ The incident's fields come from the kept articles (a value is never
 overwritten, a signal any of them supports with a quote is true), and the
 inclusion rule in rules.py is applied to the result.
 
-An incident that loses all its articles moves to removed_incidents.csv, and
-its id is never reused.
+An incident that loses all its articles moves to removed_incidents.csv with
+the reason (a reviewer's note when its articles were rejected), and its id
+is never reused. One kept here but off the site has the reason in its
+site_excluded column, set by hand and carried over by every rebuild.
 """
 
 from datetime import date
@@ -36,15 +40,16 @@ import anthropic
 
 from config import INCIDENT_COLUMNS, SIGNAL_FIELDS
 from dedupe import ages_consistent, check_duplicate, merge_into, new_info, obvious_same_incident
+from diagnoses import tidy as tidy_diagnoses
 from link import link_repeat_offenders
 from process import DecisionLog
 from rules import apply_rules
 from sources import host, outlets, publishable
 from store import INCIDENT_PREFIX, format_incident_id, next_number
 
-# Set by other steps (corroborate.py, ../database categorize.py), so a
-# rebuild carries them over.
-CARRIED = ("corroboration_checked", "offender_category", "category_reason")
+# Set by other steps (corroborate.py, ../database categorize.py) or by hand
+# (site_excluded), so a rebuild carries them over.
+CARRIED = ("corroboration_checked", "offender_category", "category_reason", "site_excluded")
 
 
 def eligible(a: dict) -> bool:
@@ -61,7 +66,7 @@ def _incident_from(a: dict, incident_id: str) -> dict:
     row.update(id=incident_id, article_ids=a["id"], article_count="1", redundant_article_ids="",
                additional_sources="", qualifies_smi="", qualify_note="", qualifies_strict="",
                repeat_offender_rules="", corroboration_checked="", offender_category="",
-               category_reason="")
+               category_reason="", site_excluded="")
     return row
 
 
@@ -113,9 +118,14 @@ def build_incidents(articles: list[dict], client: anthropic.Anthropic | None = N
     previous = previous or []
     counts = {"articles": 0, "incidents": 0, "grouped": 0, "new": 0, "qualifying": 0,
               "redundant": 0, "removed": 0}
+    rejected: dict[str, list[str]] = {}   # incident -> notes of articles just rejected from it
     for a in articles:
         if not eligible(a):
+            if a.get("incident_id") and a.get("review_status") == "rejected":
+                rejected.setdefault(a["incident_id"], []).append(a.get("review_note") or "")
             a["incident_id"] = a["contribution"] = a["added_info"] = ""
+        else:
+            tidy_diagnoses(a)   # one spelling, named disorders only (diagnoses.py)
     chosen = sorted((a for a in articles if eligible(a)), key=_order)
     counts["articles"] = len(chosen)
 
@@ -177,7 +187,13 @@ def build_incidents(articles: list[dict], client: anthropic.Anthropic | None = N
 
     today = date.today().isoformat()
     kept = {r["id"] for r in rows}
-    gone = [dict(r, removed_date=today, removed_reason="no eligible articles left")
+
+    def reason(iid: str) -> str:
+        if iid not in rejected:
+            return "no eligible articles left"
+        notes = "; ".join(dict.fromkeys(n for n in rejected[iid] if n))
+        return f"removed on review: {notes}" if notes else "removed on review"
+    gone = [dict(r, removed_date=today, removed_reason=reason(r["id"]))
             for r in previous if r["id"] not in kept]
     counts.update(incidents=len(rows), qualifying=sum(r["qualifies_smi"] == "yes" for r in rows),
                   redundant=sum(a["contribution"] == "redundant" for a in chosen),

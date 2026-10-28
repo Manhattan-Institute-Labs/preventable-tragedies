@@ -26,11 +26,13 @@ Paths below are relative to `smi/`.
 - **`data/incidents.csv`**: one row per incident, built from the coded articles, with the
   inclusion rule applied (`qualifies_smi`, and `qualify_note` saying why). Every incident is
   kept, qualifying or not, so the counts (including incidents where the subject was the one
-  harmed) are all here.
+  harmed) are all here. The site shows only the qualifying ones with two outlets (or a
+  trusted one) and no `site_excluded` reason.
 - **`data/subjects.csv`**: one row per person, like the repeat-offender database's
   `offenders.csv`.
-- **`data/removed_incidents.csv`**: incidents that lost all their articles. Their ids are
-  never reused.
+- **`data/removed_incidents.csv`**: incidents that lost all their articles, with the date and
+  reason. Their ids are never reused. Nothing is deleted: rejected and excluded articles stay
+  in `articles.csv`.
 
 ## How it works
 
@@ -59,13 +61,15 @@ Paths below are relative to `smi/`.
    quote (an unverifiable one is dropped); the prior-record fields use the repeat-offender
    database's definitions and count checks (a count the article never prints, or a prior
    record or release quote not in the article, is dropped); a `days_since_release` the article
-   does not print is blanked; summaries of unproven acts are attributed to the outlet. An
-   article outside the US, about someone under 18, or not about a specific incident gets
+   does not print is blanked; summaries of unproven acts are attributed to the outlet;
+   diagnoses are cleaned to one spelling each, named disorders only
+   ([pipeline/diagnoses.py](pipeline/diagnoses.py)). An article about an incident outside the
+   US, about someone under 18, not about a specific incident, or court-only gets
    `excluded_reason`, which keeps it out of incidents.
 7. **Incidents** ([pipeline/incidents.py](pipeline/incidents.py)). Coded articles are grouped:
    the same person with nearby dates and the same city or form is one incident by rule, and
-   Haiku decides unclear cases. Follow-up coverage (arrest, competency hearing, plea, a release
-   decision years later) is the same incident. Then, in publication order, each article's
+   Haiku decides unclear cases. Follow-up coverage of the criminal case (arrest, competency
+   hearing, trial, plea, sentencing) is the same incident. Then, in publication order, each article's
    **contribution**:
    - `primary`: the first report.
    - `corroboration`: the first report from a second outlet, always kept, because the
@@ -129,7 +133,22 @@ Articles are excluded from incidents for: links on non-US domains; opinion, edit
 budget and research coverage; police logs; no mental-health indication for the subject (a
 victim's grief does not count; a confirmed second source is exempt); substance use alone;
 dementia or developmental disability as the primary condition; anyone under 18; incidents
-outside the US.
+that happened outside the US, wherever the subject lived (a US resident who dies abroad after
+deportation is out); **court-only stories**, whose news is a later proceeding on an earlier,
+decided case (an execution, a clemency or pardon decision, an appeal, a parole or release
+hearing, a civil lawsuit or settlement). Coverage of an incident's criminal case from arrest
+through sentencing is about the incident and can qualify.
+
+To remove an incident by hand, reject its articles in review with a note; the next incidents
+build moves it to `removed_incidents.csv` with "removed on review: " and the note. To keep an
+incident in `incidents.csv` but off the site, put the reason in its `site_excluded` column:
+every rebuild keeps it, the exports skip the incident (a permalink to it shows "kept off the
+site: " and the reason), and the second-source search and categorizing skip it.
+
+When a story reports a new event and recounts an earlier crime as background, the incident is
+the new event and the earlier crime is prior history. An article coded the other way can be
+corrected in review and its `incident_id` set to the right incident; the next build merges it
+there.
 
 Names are published, as in the repeat-offender database, so its content rules apply: every
 record is sourced, allegations are worded as allegations, and copy about named people needs
@@ -146,14 +165,14 @@ editorial and legal review before launch.
 | `incident_form` | The most serious form; list in `config.INCIDENT_FORMS`. |
 | `new_offense_type`, `new_offense_severity` | The offense the subject was arrested for or accused of, in the repeat-offender vocabulary. Blank when none. |
 | Signals | `prior_hospital_discharge` (any prior psychiatric hospitalization), `prior_custody_release`, `police_brought_for_eval`, `prior_police_contact`, `prior_arrests`, `competency`, `aot`, `edp_call` (an "emotionally disturbed person" call), `crisis_call` (any other crisis call, welfare check or standoff), `family_sought_help`, `medication_lapse`, `psych_medication` (any psychiatric medication), `treatment_refusal`, `homeless`, `mh_history` (a stated history of mental illness before the incident), `diagnosis_named`. True only with a verbatim quote, kept in `signal_evidence`. False means the article did not say, not that it did not happen. |
-| `diagnosis_named` / `diagnoses` | Named disorders only (schizophrenia, schizoaffective disorder, bipolar disorder, major depressive disorder, postpartum psychosis, delusional disorder). Generic language qualifies an article but is not a diagnosis; neither are symptoms (psychosis, delusions, hearing voices). |
+| `diagnosis_named` / `diagnoses` | Named mental disorders only (schizophrenia, schizoaffective disorder, bipolar disorder, major depressive disorder, postpartum psychosis, delusional disorder; post-traumatic stress disorder and postpartum depression are kept for now). Generic language ("mental illness", "depression") qualifies an article but is not a diagnosis; neither are symptoms (psychosis, mania, delusions, hearing voices) or physical conditions. One spelling per disorder ("PTSD" is stored as post-traumatic stress disorder, "paranoid schizophrenia" as schizophrenia); the list is in [pipeline/diagnoses.py](pipeline/diagnoses.py), and every incidents build applies it to rows already coded. When every label an article listed is dropped, `diagnosis_named` is set false. |
 | `days_since_release` | Days between a hospital or custody release and the incident, only when the article prints the interval. |
 | Prior record | `prior_count_arrests`, `prior_count_convictions`, `prior_count_felony_convictions` (only numbers the article prints), `prior_offenses`, `prior_evidence_quote`, `release_status` (at the time of the incident, from an earlier case), `release_evidence_quote`, `releasing_jurisdiction`: the repeat-offender database's fields and definitions. A verified record also sets `prior_arrests`; a verified release status sets `prior_custody_release`. |
 | `failure_point`, `responsible_system`, `evidence_tier` | As in Known to the System; `failure not established` and T4 are the defaults. |
 | `subject_key` | `last_first_ST`, the same normalization as `offender_key`. |
 | `repeat_offender_ids` | Ids in `../database/` for the same person. |
 | Articles only | `published`, `headline`; `coded_by` (`phrasebook` or `claude`); `review_status` (`pending` = not looked at, `flagged`, `accepted`, `rejected`) and `reviewed_date`; `excluded_reason`; `incident_id`; `contribution` (`primary`, `corroboration`, `context`, `redundant`); `added_info`. |
-| Incidents only | `article_ids`, `article_count`, `redundant_article_ids`; `qualifies_smi`, `qualify_note`; `qualifies_strict` (the repeat-offender count threshold), `repeat_offender_rules`; `corroboration_checked`; `offender_category`, `category_reason` (set by `../database/pipeline/categorize.py`). |
+| Incidents only | `article_ids`, `article_count`, `redundant_article_ids`; `qualifies_smi`, `qualify_note`; `qualifies_strict` (the repeat-offender count threshold), `repeat_offender_rules`; `corroboration_checked`; `offender_category`, `category_reason` (set by `../database/pipeline/categorize.py`); `site_excluded` (set by hand: why the incident is kept off the site). |
 
 ## Running
 

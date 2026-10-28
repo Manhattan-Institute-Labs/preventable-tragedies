@@ -1040,6 +1040,7 @@ def test_exports_merge_smi_incidents(monkeypatch, tmp_path):
         _smi(4, additional_sources=""),                                          # one outlet only
         _smi(5, offender_category="petty", category_reason="theft priors", repeat_offender_rules="yes",
              prior_count_arrests="14", qualifies_strict="yes"),
+        _smi(7, site_excluded="court-only coverage"),                            # kept off the site
     ]
     _write(tmp_path / "smi.csv", smi)
     _write(tmp_path / "smi_removed.csv", [{**_smi(6), "removed_date": "2026-10-01",
@@ -1059,7 +1060,9 @@ def test_exports_merge_smi_incidents(monkeypatch, tmp_path):
     stats = json.loads((site / "stats.json").read_text())
     assert stats["by_category"] == {"smi": 3, "violent": 1, "petty": 1}
     assert stats["offenders"] == 1                                        # this database's people only
-    assert "2000006" in json.loads((site / "removed.json").read_text())
+    removed = json.loads((site / "removed.json").read_text())
+    assert "2000006" in removed
+    assert removed["2000007"]["reason"] == "kept off the site: court-only coverage"
 
 
 def test_same_incident_needs_a_shared_source_or_nearby_dates():
@@ -1075,7 +1078,8 @@ def test_same_incident_needs_a_shared_source_or_nearby_dates():
 def test_categorize_sweep_smi_only_rows_meeting_the_rules(monkeypatch, tmp_path):
     import categorize as ca
     path = tmp_path / "incidents.csv"
-    _write(path, [_smi(1, repeat_offender_rules="yes", prior_count_arrests="14"), _smi(2)])
+    _write(path, [_smi(1, repeat_offender_rules="yes", prior_count_arrests="14"), _smi(2),
+                  _smi(3, repeat_offender_rules="yes", site_excluded="court-only coverage")])
     seen = []
     monkeypatch.setattr(ca, "fetch_article_text", lambda u: ARTICLE)
     monkeypatch.setattr(ca, "ask", lambda c, row, text: seen.append(row) or ca.CategoryResult(
