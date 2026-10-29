@@ -17,6 +17,7 @@ bradley_kingston_GA,Kingston Bradley,GA,INC-000084,1,1,2026-09-24,2026-09-24,1,,
 brand_guy_OH,Guy Brand,OH,INC-000008,1,1,2026-05-26,2026-05-26,,,,police_brought_for_eval competency crisis_call psych_medication,psychotic disorder; bipolar disorder,
 braun_jonathan_NY,Jonathan Braun,NY,INC-000153,1,1,2024-04,2024-04,,1,1,prior_custody_release prior_arrests,,1000577
 brien_william_MA,William O'Brien,MA,INC-000053,1,1,2023-05-20,2023-05-20,,1,1,prior_custody_release prior_arrests mh_history,,
+brimmage_rashid_NY,Rashid Brimmage,NY,INC-000184,1,1,2020-06-12,2020-06-12,100,,,police_brought_for_eval prior_arrests mh_history,,861
 brooks_jarrett_FL,Jarrett Brooks,FL,INC-000134,1,1,2026-10-19,2026-10-19,,,1,prior_arrests crisis_call,,
 brown_brenda_WA,Brenda Wilder-Brown,WA,INC-000089,1,0,2026-05,2026-05,,,,competency crisis_call,,
 brown_decarlos_NC,Decarlos Brown Jr.,NC,INC-000162,1,1,2025-08-22,2025-08-22,14,,1,prior_custody_release prior_police_contact prior_arrests competency edp_call crisis_call family_sought_help treatment_refusal homeless mh_history diagnosis_named,schizophrenia,88
@@ -43,6 +44,7 @@ defoor_william_OH,William D. DeFoor,OH,INC-000009,1,1,2026-01-05,2026-01-05,2,1,
 deleon_hector_NY,Hector Deleon,NY,INC-000178,1,1,2026-06-08,2026-06-08,7,1,,prior_custody_release prior_police_contact prior_arrests homeless,,292
 delgado_jonathan_AZ,Jonathan Marquez Delgado,AZ,INC-000027,1,1,2026-09-07,2026-09-07,,,,police_brought_for_eval edp_call crisis_call mh_history,,
 deoliveira_lena_ND,Lena Deoliveira,ND,INC-000081,1,0,2025-09,2025-09,,,,,,
+deschaine_dylan_FL,Dylan Deschaine,FL,INC-000185,1,1,2026-10-28,2026-10-28,,,,prior_arrests homeless mh_history,,
 donoher_julian_,Julian Donoher,,INC-000075,1,0,2025-09-06,2025-09-06,,,,prior_arrests medication_lapse psych_medication mh_history diagnosis_named,schizoaffective disorder; bipolar disorder; attention-deficit/hyperactivity disorder,
 dorisme_jerry_FL,Jerry Dorisme,FL,INC-000029,1,1,2024-07-04,2024-07-04,,1,1,prior_hospital_discharge prior_arrests competency crisis_call homeless mh_history,,
 eaton_jason_VT,Jason Eaton,VT,INC-000064,1,1,2023-11,2023-11,,,,competency mh_history diagnosis_named,attention-deficit/hyperactivity disorder; post-traumatic stress disorder; bipolar disorder; borderline personality disorder; major depressive disorder,
@@ -78,6 +80,7 @@ hopson_carnell_GA,Carnell Hopson,GA,INC-000135,1,1,2026-10-16,2026-10-16,,,,cris
 hunt_di_NC,Di-Quan Schafar Hunt,NC,INC-000181,1,1,2026-07-30,2026-07-30,9,,,prior_hospital_discharge prior_arrests family_sought_help mh_history,schizophrenia; post-traumatic stress disorder; bipolar disorder,21
 hussain_shahid_IL,Shahid Hussain,IL,INC-000079,1,1,2026-02-12,2026-02-12,,,,prior_arrests mh_history,,
 jackson_james_MI,James William Jackson,MI,INC-000114,1,1,2026-07-19,2026-07-19,,2,,prior_hospital_discharge prior_custody_release prior_police_contact prior_arrests homeless mh_history,schizophrenia; bipolar disorder,
+jackson_quantae_IN,Quantae A. Jackson,IN,INC-000187,1,1,2026-10-28,2026-10-28,2,,,prior_arrests,,
 jalloh_abdul_VA,Abdul Jalloh,VA,INC-000174,1,1,2026-02-23,2026-02-23,30,1,,prior_custody_release prior_police_contact prior_arrests mh_history,,45
 jarrett_terrell_NY,Terrell Jarrett,NY,INC-000177,1,1,2026-05-31,2026-05-31,6,,,police_brought_for_eval prior_arrests,,1003160
 jones_amy_WI,Amy Jones,WI,INC-000108,1,1,2026-09-24,2026-09-24,0,,,prior_hospital_discharge prior_arrests medication_lapse psych_medication mh_history diagnosis_named,bipolar disorder,
@@ -103,6 +106,7 @@ mcalister_troy_CA,Troy McAlister,CA,INC-000147,1,1,2020-12-31,2020-12-31,,,,prio
 mccaulley_jamar_AL,Jamar McCaulley,AL,INC-000143,1,1,2026-10-15,2026-10-15,,,,diagnosis_named,schizophrenia; bipolar disorder,
 mccollister_tony_OH,Tony McCollister,OH,INC-000097,1,1,2026-09-28,2026-09-28,,,,prior_arrests mh_history,,
 mcmaster_jeffrey_CA,Jeffrey McMaster Jr.,CA,INC-000173,1,1,2026-02-03,2026-02-03,,,3,prior_custody_release prior_police_contact prior_arrests competency,,1002280
+miller_jonathan_NC,Jonathan Miller,NC,INC-000188,1,1,2026-10-28,2026-10-28,,,,edp_call crisis_call,,
 morey_paul_MA,Paul Morey,MA,INC-000056,1,1,2026-09-10,2026-09-10,,,,competency crisis_call medication_lapse psych_medication mh_history diagnosis_named,bipolar disorder; post-traumatic stress disorder,
 neal_jonah_TN,Jonah Neal,TN,INC-000022,1,1,2026-05-21,2026-05-21,,,,crisis_call family_sought_help,,
 ogbodiegwu_benedict_TX,Benedict Chinedu Ogbodiegwu Jr.,TX,INC-000057,1,1,2026-09-07,2026-09-07,4,,,prior_custody_release prior_arrests competency,,
@@ -120,6 +124,7 @@ reed_lawrence_IL,Lawrence Reed,IL,INC-000168,1,1,2025-11-17,2025-11-17,72,15,8,p
 richardson_anthony_NC,Anthony Richardson,NC,INC-000060,1,1,2026-09-18,2026-09-18,,,,crisis_call mh_history,post-traumatic stress disorder,
 rivera_ramon_NY,Ramon Rivera,NY,INC-000151,1,1,2024-11-18,2024-11-18,20,,,prior_custody_release police_brought_for_eval prior_police_contact prior_arrests crisis_call homeless mh_history,,782
 robinson_octavia_PA,Octavia Robinson,PA,INC-000044,1,1,2025-06-23,2025-06-23,,,,prior_hospital_discharge police_brought_for_eval crisis_call,,
+rocha_samuel_CA,Samuel Matthew Rocha,CA,INC-000186,1,1,2021-04-19,2021-04-19,,,,medication_lapse psych_medication mh_history,,
 rodriguez_jose_CA,Jose Jesus Rodriguez,CA,INC-000183,1,1,2026-08-28,2026-08-28,,2,1,prior_custody_release prior_arrests homeless mh_history,,1003639
 rosen_daniel_MI,Daniel Rosen,MI,INC-000062,1,1,2026-09,2026-09,,,,prior_police_contact prior_arrests family_sought_help mh_history,,
 ryan_thomas_NY,Thomas David Ryan,NY,INC-000182,1,1,2026-08-06,2026-08-06,7,,,prior_custody_release prior_arrests family_sought_help medication_lapse psych_medication mh_history,schizophrenia,1003533
@@ -151,7 +156,7 @@ voight_david_CA,David Voight,CA,INC-000083,1,1,2026-09-16,2026-09-16,,,,crisis_c
 vorst_seth_NE,Seth Vander Vorst,NE,INC-000133,1,1,2026-10-18,2026-10-18,1,,,prior_custody_release prior_police_contact prior_arrests crisis_call mh_history,,
 walker_aaron_NY,Aaron Walker,NY,INC-000163,1,1,2025-09-24,2025-09-24,18,1,6,prior_custody_release prior_arrests homeless,,86
 walsh_corie_IL,Corie A. Walsh,IL,INC-000025,1,1,2026-09-04,2026-09-04,,,,crisis_call psych_medication mh_history,,
-watson_devon_MI,Devon Jason Watson,MI,INC-000066,1,1,2026-09-21,2026-09-21,,,,prior_hospital_discharge police_brought_for_eval crisis_call medication_lapse psych_medication homeless mh_history,,
+watson_devon_MI,Devon Jason Watson,MI,INC-000066,1,1,2026-09-21,2026-09-21,,,,prior_hospital_discharge police_brought_for_eval aot crisis_call medication_lapse psych_medication homeless mh_history,,
 weatherall_naziyha_SC,Naziyha La'Nay Weatherall,SC,INC-000001,1,1,2026-04-22,2026-04-22,0,0,,prior_arrests competency crisis_call mh_history diagnosis_named,schizophrenia,
 williams_vickie_FL,Vickie Williams,FL,INC-000072,1,1,2022-12-31,2022-12-31,,,,prior_arrests homeless diagnosis_named,schizophrenia,
 wiseman_andrew_SC,Andrew Wiseman,SC,INC-000069,1,1,2026-03,2026-03,,,,competency psych_medication,,
