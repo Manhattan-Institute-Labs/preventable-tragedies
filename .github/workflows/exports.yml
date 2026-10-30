@@ -40,13 +40,13 @@ jobs:
       - run: pip install -r requirements.txt
       - name: Build exports
         run: |
-          python pipeline/validate_data.py || { python pipeline/quarantine.py && python pipeline/validate_data.py; }
+          bash pipeline/check_data.sh   # validate both harvesters' data; quarantine or discard
           python pipeline/build_exports.py
       - name: Commit rebuilt exports
         run: |
           git config user.name "preventable-tragedies-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add exports data/offenders.csv
+          git add exports data ../smi/data
           git diff --cached --quiet || git commit -m "Rebuild exports"
           git pull --rebase --autostash origin main
           git push
