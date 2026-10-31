@@ -2,8 +2,6 @@
 
 import csv
 import json
-import re
-import unicodedata
 from datetime import date
 
 from classify import qualifies_strict
@@ -11,23 +9,10 @@ from pathlib import Path
 
 from config import (BACKFILL_STORIES_CSV, CSV_COLUMNS, REMOVED_COLUMNS, REMOVED_CSV,
                     SEEN_URLS_JSON, STORIES_CSV)
+from shared import person_key
 
-_SUFFIXES = {"jr", "sr", "ii", "iii", "iv", "v"}
-
-
-def offender_key(name: str | None, state: str | None) -> str:
-    """Normalized person key: last name, first name, state. Middle names,
-    initials, suffixes, punctuation, and accents are dropped so "John M.
-    Smith Jr." and "John Smith" collide. Dedupe confirms the match; this
-    only nominates candidates. Empty if there is no name."""
-    if not name:
-        return ""
-    s = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
-    s = re.sub(r"[^a-z\s]", " ", s.lower())
-    parts = [p for p in s.split() if p not in _SUFFIXES]
-    if len(parts) < 2:
-        return ""
-    return f"{parts[-1]}_{parts[0]}_{(state or '').upper()}"
+# One key for both harvesters: the SMI tracker's subject_key is this function.
+offender_key = person_key
 
 
 def load_stories(path: Path | None = None) -> list[dict]:

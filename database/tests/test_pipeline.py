@@ -9,6 +9,7 @@ import pytest
 import build_exports
 import config
 import process
+import records
 import store
 import validate_data
 from classify import StoryClassification, check_evidence, qualifies_strict, quote_in_text
@@ -217,7 +218,7 @@ def test_process_skips_stored_url_variants(monkeypatch, tmp_path):
 
 
 def test_exports_and_validation(monkeypatch, tmp_path):
-    monkeypatch.setattr(build_exports, "REQUIRE_CORROBORATION", False)  # merging and validation, not the source rule
+    monkeypatch.setattr(records, "REQUIRE_CORROBORATION", False)  # merging and validation, not the source rule
     data = tmp_path / "data"
     site = tmp_path / "site"
     data.mkdir()
@@ -465,7 +466,7 @@ def test_fetch_skips_video_pages(monkeypatch):
 
 
 def test_exports_merge_daily_and_backfill(monkeypatch, tmp_path):
-    monkeypatch.setattr(build_exports, "REQUIRE_CORROBORATION", False)
+    monkeypatch.setattr(records, "REQUIRE_CORROBORATION", False)
     data = tmp_path / "data"
     (data / "backfill").mkdir(parents=True)
     site = tmp_path / "site"
@@ -868,7 +869,7 @@ def test_exports_hold_back_single_source_rows(monkeypatch, tmp_path):
                           ("REMOVED_CSV", data / "removed.csv"), ("EXPORTS_DIR", site), ("OFFENDERS_CSV", data / "offenders.csv")):
             if hasattr(mod, name):
                 monkeypatch.setattr(mod, name, val)
-    monkeypatch.setattr(be, "REQUIRE_CORROBORATION", True)
+    monkeypatch.setattr(records, "REQUIRE_CORROBORATION", True)
     r1 = make_row(1, _cls(), {"url": "https://wxyz.com/a", "source": "WXYZ"})                      # single source
     r2 = make_row(2, _cls(offender_name="Ann Lee"), {"url": "https://www.nytimes.com/b", "source": "NYT"})  # trusted
     r3 = make_row(3, _cls(offender_name="Bo Park"), {"url": "https://wxyz.com/c", "source": "WXYZ"})
@@ -1018,7 +1019,7 @@ def _write(path, rows):
         w.writerows(rows)
 
 
-def test_exports_merge_smi_incidents(monkeypatch, tmp_path):
+def test_exports_one_record_set_with_discrete_categories(monkeypatch, tmp_path):
     import build_exports as be
     import store, config
     data, site = tmp_path / "data", tmp_path / "site"
@@ -1028,65 +1029,87 @@ def test_exports_merge_smi_incidents(monkeypatch, tmp_path):
                           ("REMOVED_CSV", data / "removed.csv"), ("EXPORTS_DIR", site), ("OFFENDERS_CSV", data / "offenders.csv")):
             if hasattr(mod, name):
                 monkeypatch.setattr(mod, name, val)
-    monkeypatch.setattr(be, "REQUIRE_CORROBORATION", True)
+    monkeypatch.setattr(records, "REQUIRE_CORROBORATION", True)
     shared = make_row(1, _cls(), {"url": "https://www.nytimes.com/a", "source": "NYT"})
     shared["offender_category"], shared["category_reason"] = "violent", "r"
-    store.save_stories([shared])
+    other = make_row(2, _cls(offender_name="Ann Lee"), {"url": "https://www.nytimes.com/b", "source": "NYT"})
+    other["offender_category"], other["category_reason"] = "petty", "r"
+    store.save_stories([shared, other])
     smi = [
-        _smi(1, source_url="https://www.nytimes.com/a", additional_sources=""),   # the same incident
+        _smi(1, source_url="https://www.nytimes.com/a", additional_sources=""),   # the same incident as story 1
         _smi(2, subject_role="subject_victim", killed_by_police="true", fatality="true",
-             incident_form="fatal police encounter", new_offense_type="", outcome="died"),
+             incident_form="fatal police encounter", new_offense_type="", outcome="died",
+             subject_key="doe_victim_OH"),
         _smi(3, qualifies_smi="no"),                                              # fails the rule
         _smi(4, additional_sources=""),                                          # one outlet only
-        _smi(5, offender_category="petty", category_reason="theft priors", repeat_offender_rules="yes",
-             prior_count_arrests="14", qualifies_strict="yes"),
+        _smi(5, prior_count_arrests="14", qualifies_strict="yes", subject_key="doe_five_OH"),
         _smi(7, site_excluded="court-only coverage"),                            # kept off the site
     ]
     _write(tmp_path / "smi.csv", smi)
     _write(tmp_path / "smi_removed.csv", [{**_smi(6), "removed_date": "2026-10-01",
                                            "removed_reason": "no eligible articles left"}])
-    monkeypatch.setattr(be, "SMI_INCIDENTS_CSV", tmp_path / "smi.csv")
+    monkeypatch.setattr(records, "SMI_INCIDENTS_CSV", tmp_path / "smi.csv")
     monkeypatch.setattr(be, "SMI_REMOVED_CSV", tmp_path / "smi_removed.csv")
     be.build_exports()
     by_id = {r["id"]: r for r in json.loads((site / "stories.json").read_text())}
-    assert sorted(by_id) == [1, 2_000_002, 2_000_005]
-    assert by_id[1]["categories"] == ["violent", "smi"]                  # cross-listed, one card
-    assert by_id[1]["smi_signals"] == ["prior_hospital_discharge", "mh_history"]
-    assert by_id[2_000_002]["categories"] == ["smi"] and by_id[2_000_002]["offender_name"] == "Person 2 Doe"
+    assert sorted(by_id) == [2, 2_000_001, 2_000_002, 2_000_005]       # story 1 shown once, as SMI
+    assert all("categories" not in r for r in by_id.values())
+    assert by_id[2]["category"] == "petty"
+    assert by_id[2_000_001]["category"] == "smi"                         # discrete: never violent too
+    assert by_id[2_000_001]["smi_signals"] == ["prior_hospital_discharge", "mh_history"]
+    assert by_id[2_000_002]["category"] == "smi" and by_id[2_000_002]["offender_name"] == "Person 2 Doe"
     assert by_id[2_000_002]["incident_form"] == "fatal police encounter"
     assert "subject_role" not in by_id[2_000_002] and "other_party" not in by_id[2_000_002]
-    assert by_id[2_000_005]["categories"] == ["smi", "petty"]            # reverse cross-listed
+    assert by_id[2_000_005]["category"] == "smi"                         # strict counts, still only smi
     assert by_id[2_000_005]["prior_count_arrests"] == 14 and by_id[2_000_005]["days_since_release"] == 3
     stats = json.loads((site / "stats.json").read_text())
-    assert stats["by_category"] == {"smi": 3, "violent": 1, "petty": 1}
-    assert stats["offenders"] == 1                                        # this database's people only
+    assert stats["by_category"] == {"smi": 3, "petty": 1}
+    # One people list from both harvesters; the subject the incident harmed is not an offender.
+    keys = {o["offender_key"] for o in json.loads((site / "offenders.json").read_text())}
+    assert keys == {"lee_ann_OH", "doe_person_OH", "doe_five_OH"}
     removed = json.loads((site / "removed.json").read_text())
+    assert removed["1"] == {"date": "", "reason": "listed as a serious-mental-illness case", "see": 2_000_001}
     assert "2000006" in removed
     assert removed["2000007"]["reason"] == "kept off the site: court-only coverage"
 
 
 def test_same_incident_needs_a_shared_source_or_nearby_dates():
-    from build_exports import same_incident
+    from records import same_incident
     story = {"source_url": "https://a.com/x", "offender_key": "doe_jane_OH", "incident_date": "2026-09-01"}
     assert same_incident(story, {"source_url": "https://a.com/x/?utm_source=t"})
-    assert same_incident(story, {"source_url": "https://b.com/y", "subject_key": "doe_jane_OH",
+    assert same_incident(story, {"source_url": "https://b.com/y", "offender_key": "doe_jane_OH",
                                  "incident_date": "2026-09-15"})
-    assert not same_incident(story, {"source_url": "https://b.com/y", "subject_key": "doe_jane_OH",
+    assert not same_incident(story, {"source_url": "https://b.com/y", "offender_key": "doe_jane_OH",
                                      "incident_date": "2026-12-01"})     # same person, later incident
 
 
-def test_categorize_sweep_smi_only_rows_meeting_the_rules(monkeypatch, tmp_path):
-    import categorize as ca
-    path = tmp_path / "incidents.csv"
-    _write(path, [_smi(1, repeat_offender_rules="yes", prior_count_arrests="14"), _smi(2),
-                  _smi(3, repeat_offender_rules="yes", site_excluded="court-only coverage")])
-    seen = []
-    monkeypatch.setattr(ca, "fetch_article_text", lambda u: ARTICLE)
-    monkeypatch.setattr(ca, "ask", lambda c, row, text: seen.append(row) or ca.CategoryResult(
-        category="petty", violent_priors=0, reason="theft priors",
-        evidence_quote="Court records show Smith has been arrested 11 times since 2015"))
-    counts = ca.sweep_smi(None, path, log=process.DecisionLog(tmp_path / "log.jsonl"))
-    assert counts["checked"] == 1 and seen[0]["offender_name"] == "Person 1 Doe"
-    rows = list(csv.DictReader(open(path, newline="", encoding="utf-8")))
-    assert rows[0]["offender_category"] == "petty" and rows[1]["offender_category"] == ""
-    assert rows[0]["mh_history"] == "true"                                # its own columns kept
+def test_validation_and_quarantine_cover_smi_records(monkeypatch, tmp_path):
+    import quarantine
+    import store, config
+    data = tmp_path / "data"
+    data.mkdir(); (data / "backfill").mkdir()
+    for mod in (store, config, validate_data, quarantine):
+        for name, val in (("STORIES_CSV", data / "stories.csv"), ("BACKFILL_STORIES_CSV", data / "backfill" / "stories.csv"),
+                          ("REMOVED_CSV", data / "removed.csv"), ("DATA_DIR", data)):
+            if hasattr(mod, name):
+                monkeypatch.setattr(mod, name, val)
+    monkeypatch.setattr(quarantine, "QUARANTINE_CSV", data / "quarantine.csv")
+    store.save_stories([make_row(1, _cls(), {"url": "https://wxyz.com/a", "source": "WXYZ"})])
+    smi = [
+        # Harmed, not accused, no arrest: fine for an SMI record, though a story would fail.
+        _smi(1, subject_role="subject_victim", outcome="died", fatality="true", new_offense_type="",
+             new_offense_severity=""),
+        _smi(2, incident_date="2099-01-01"),                                     # a misread date
+        _smi(3, age="16", qualifies_smi="no"),                                   # not a candidate
+    ]
+    _write(tmp_path / "smi.csv", [{**r, "site_excluded": ""} for r in smi])
+    monkeypatch.setattr(records, "SMI_INCIDENTS_CSV", tmp_path / "smi.csv")
+    assert validate_data.problems() == ["id 2000002: incident_date '2099-01-01' is in the future"]
+    with pytest.raises(SystemExit):
+        validate_data.main()
+    quarantine.main()
+    validate_data.main()
+    rows = {r["id"]: r for r in csv.DictReader(open(tmp_path / "smi.csv", newline="", encoding="utf-8"))}
+    assert rows["INC-000002"]["site_excluded"].startswith("quarantined ")
+    assert rows["INC-000001"]["site_excluded"] == "" and len(rows) == 3   # nothing deleted
+

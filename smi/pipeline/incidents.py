@@ -47,9 +47,9 @@ from rules import apply_rules
 from sources import host, outlets, publishable
 from store import INCIDENT_PREFIX, format_incident_id, next_number
 
-# Set by other steps (corroborate.py, ../database categorize.py) or by hand
+# Set by another step (corroborate.py), or by hand or quarantine
 # (site_excluded), so a rebuild carries them over.
-CARRIED = ("corroboration_checked", "offender_category", "category_reason", "site_excluded")
+CARRIED = ("corroboration_checked", "site_excluded")
 
 
 def eligible(a: dict) -> bool:
@@ -65,8 +65,7 @@ def _incident_from(a: dict, incident_id: str) -> dict:
     row = {f: a.get(f, "") for f in INCIDENT_COLUMNS}
     row.update(id=incident_id, article_ids=a["id"], article_count="1", redundant_article_ids="",
                additional_sources="", qualifies_smi="", qualify_note="", qualifies_strict="",
-               repeat_offender_rules="", corroboration_checked="", offender_category="",
-               category_reason="", site_excluded="")
+               corroboration_checked="", site_excluded="")
     return row
 
 
