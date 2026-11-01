@@ -1,18 +1,18 @@
 {
- "updated": "2026-10-31",
- "stories": 549,
- "stories_strict": 455,
+ "updated": "2026-11-01",
+ "stories": 550,
+ "stories_strict": 456,
  "by_category": {
   "violent": 181,
-  "unclassified": 141,
+  "unclassified": 142,
   "petty": 131,
   "smi": 129,
   "pending": 1
  },
- "offenders": 434,
+ "offenders": 435,
  "offenders_multiple_incidents": 8,
  "by_state": {
-  "NY": 124,
+  "NY": 125,
   "FL": 59,
   "CA": 41,
   "TX": 25,
@@ -61,7 +61,7 @@
   "DC": 1
  },
  "by_state_strict": {
-  "NY": 111,
+  "NY": 112,
   "FL": 50,
   "CA": 33,
   "TX": 23,
@@ -110,7 +110,7 @@
  },
  "by_release_status": {
   "none stated": 304,
-  "parole": 66,
+  "parole": 67,
   "bail/bond": 57,
   "probation": 39,
   "early release": 38,
@@ -126,7 +126,7 @@
   "shooting": 40,
   "other": 36,
   "burglary": 26,
-  "theft/larceny": 23,
+  "theft/larceny": 24,
   "weapons offense": 21,
   "robbery": 19,
   "DUI/vehicular": 18,
@@ -140,7 +140,7 @@
  },
  "by_severity": {
   "violent": 365,
-  "property": 68,
+  "property": 69,
   "drug": 45,
   "other": 39,
   "weapons": 21
@@ -151,6 +151,7 @@
   "2014-09": 1,
   "2014-10": 1,
   "2015-08": 1,
+  "2016-01": 1,
   "2016-03": 1,
   "2016-06": 2,
   "2016-08": 1,
