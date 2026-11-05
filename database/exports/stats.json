@@ -1,18 +1,18 @@
 {
- "updated": "2026-11-04",
- "stories": 558,
- "stories_strict": 461,
+ "updated": "2026-11-05",
+ "stories": 561,
+ "stories_strict": 463,
  "by_category": {
   "violent": 181,
-  "unclassified": 146,
-  "smi": 133,
-  "petty": 132
+  "unclassified": 147,
+  "smi": 134,
+  "petty": 133
  },
- "offenders": 439,
+ "offenders": 441,
  "offenders_multiple_incidents": 8,
  "by_state": {
-  "NY": 126,
-  "FL": 61,
+  "NY": 127,
+  "FL": 62,
   "CA": 41,
   "TX": 25,
   "MI": 24,
@@ -34,12 +34,12 @@
   "KS": 6,
   "VT": 5,
   "HI": 5,
+  "TN": 5,
   "MD": 4,
   "ND": 4,
   "ME": 4,
   "WY": 4,
   "OR": 4,
-  "TN": 4,
   "IN": 4,
   "CO": 4,
   "AZ": 4,
@@ -61,7 +61,7 @@
   "NM": 1
  },
  "by_state_strict": {
-  "NY": 113,
+  "NY": 114,
   "FL": 51,
   "CA": 33,
   "TX": 23,
@@ -85,11 +85,11 @@
   "WY": 4,
   "OR": 4,
   "PA": 4,
+  "TN": 4,
   "CO": 4,
   "NE": 4,
   "ND": 3,
   "MD": 3,
-  "TN": 3,
   "NH": 3,
   "IN": 3,
   "KY": 3,
@@ -110,24 +110,24 @@
   "NM": 1
  },
  "by_release_status": {
-  "none stated": 311,
+  "none stated": 312,
   "parole": 67,
-  "bail/bond": 58,
-  "probation": 39,
+  "bail/bond": 59,
+  "probation": 40,
   "early release": 38,
   "supervised release": 32,
   "pretrial release": 11,
   "charges dropped": 2
  },
  "by_offense_type": {
-  "homicide": 126,
+  "homicide": 127,
   "assault": 99,
   "drug offense": 47,
+  "shooting": 42,
   "sexual assault": 41,
-  "shooting": 41,
   "other": 37,
   "burglary": 26,
-  "theft/larceny": 24,
+  "theft/larceny": 25,
   "weapons offense": 21,
   "robbery": 19,
   "DUI/vehicular": 18,
@@ -140,8 +140,8 @@
   "carjacking": 2
  },
  "by_severity": {
-  "violent": 369,
-  "property": 69,
+  "violent": 371,
+  "property": 70,
   "drug": 47,
   "other": 40,
   "weapons": 21
@@ -153,6 +153,7 @@
   "2014-09": 1,
   "2014-10": 1,
   "2015-08": 1,
+  "2015-10": 1,
   "2016-01": 1,
   "2016-03": 1,
   "2016-06": 2,
@@ -211,7 +212,7 @@
   "2025-02": 13,
   "2025-03": 11,
   "2025-04": 14,
-  "2025-05": 16,
+  "2025-05": 17,
   "2025-06": 12,
   "2025-07": 18,
   "2025-08": 9,
@@ -229,6 +230,6 @@
   "2026-08": 30,
   "2026-09": 34,
   "2026-10": 30,
-  "2026-11": 2
+  "2026-11": 3
  }
 }

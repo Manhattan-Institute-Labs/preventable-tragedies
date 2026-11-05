@@ -39,6 +39,7 @@ cisneros_pamela_NY,Pamela Cisneros,NY,INC-000003,1,1,2026-08-31,2026-08-31,,,,pr
 clancy_lindsay_MA,Lindsay Clancy,MA,INC-000011,1,1,2023-01-24,2023-01-24,,,,prior_hospital_discharge family_sought_help psych_medication mh_history,postpartum psychosis,
 colburn_stone_VA,Stone Lee Colburn,VA,INC-000046,1,0,2021-07-04,2021-07-04,,,,competency,,
 cole_ryan_FL,Ryan Cole,FL,INC-000146,1,1,2019,2019,,,,diagnosis_named,psychotic disorder,783
+collier_christian_FL,Christian Morgan Collier,FL,INC-000200,1,1,2026-11-03,2026-11-03,1,1,,prior_custody_release prior_arrests,,
 conley_james_VA,James Edward Conley Jr.,VA,INC-000195,1,1,2026-05-30,2026-05-30,,,,competency mh_history,,
 crawford_dustin_CA,Dustin Crawford,CA,INC-000043,1,1,2026-08-20,2026-08-20,,,,prior_arrests mh_history,,
 danese_michele_,Michele Danese,,INC-000071,1,0,2021-03,2021-03,,,,prior_hospital_discharge prior_arrests crisis_call medication_lapse psych_medication mh_history,bipolar disorder; schizophrenia,
@@ -161,6 +162,7 @@ togochog_temulun_MI,Temulun Togochog,MI,INC-000196,1,1,2026-11-03,2026-11-03,,,,
 upham_william_FL,William L. Upham,FL,INC-000138,1,1,2026-07-16,2026-07-16,,,,prior_hospital_discharge police_brought_for_eval competency crisis_call,,
 vangrinsven_troy_WI,Troy VanGrinsven,WI,INC-000020,1,1,2020-03-31,2020-03-31,,,,competency psych_medication mh_history,,
 vazquez_nazario_OH,Nazario Vazquez,OH,INC-000104,1,1,2026-09-02,2026-09-02,,,,prior_hospital_discharge police_brought_for_eval crisis_call,,
+venegas_alex_FL,Alex Venegas,FL,INC-000199,1,1,2026-11-02,2026-11-02,,,,prior_hospital_discharge prior_custody_release edp_call mh_history,,
 voight_david_CA,David Voight,CA,INC-000083,1,1,2026-09-16,2026-09-16,,,,crisis_call family_sought_help,,
 vorst_seth_NE,Seth Vander Vorst,NE,INC-000133,1,1,2026-10-18,2026-10-18,1,,,prior_custody_release prior_police_contact prior_arrests crisis_call mh_history,,
 walker_aaron_NY,Aaron Walker,NY,INC-000163,1,1,2025-09-24,2025-09-24,18,1,6,prior_custody_release prior_arrests homeless,,86
