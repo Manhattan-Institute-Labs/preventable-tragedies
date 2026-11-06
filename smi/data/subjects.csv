@@ -58,6 +58,7 @@ esparragoza_hansel_NY,Hansel Esparragoza,NY,INC-000150,1,1,2024-09-13,2024-09-13
 exantus_ronald_FL,Ronald Exantus,FL,INC-000164,1,1,2025-10-09,2025-10-09,,3,,prior_custody_release prior_arrests mh_history diagnosis_named,schizophrenia,711
 fernandes_moses_,Moses Fernandes,,INC-000132,1,0,2025-11-04,2025-11-04,,,,mh_history,schizophrenia spectrum disorder,
 fisher_constance_ME,Constance Fisher,ME,INC-000086,1,1,1954-03-08,1954-03-08,,,,prior_hospital_discharge competency family_sought_help,postpartum depression,
+flores_riley_OH,Riley Quentin Flores,OH,INC-000201,1,1,2026-06-23,2026-06-23,,,,police_brought_for_eval competency,,
 flyysoulja_alex_FL,Alex Venegas (Flyysoulja),FL,INC-000192,1,0,2026-10-29,2026-10-29,,,,prior_hospital_discharge police_brought_for_eval crisis_call mh_history,,
 foster_nathaniel_WA,Nathaniel Foster,WA,INC-000004,1,0,2026-07,2026-07,,,,police_brought_for_eval prior_arrests competency crisis_call homeless mh_history,,
 francilus_kersten_FL,Kersten Francilus,FL,INC-000016,1,1,2025-04-01,2025-04-01,,,,prior_police_contact competency edp_call family_sought_help medication_lapse psych_medication mh_history,,
@@ -114,6 +115,7 @@ mccollister_tony_OH,Tony McCollister,OH,INC-000097,1,1,2026-09-28,2026-09-28,,,,
 mcmaster_jeffrey_CA,Jeffrey McMaster Jr.,CA,INC-000173,1,1,2026-02-03,2026-02-03,,,3,prior_custody_release prior_police_contact prior_arrests competency,,1002280
 miller_jonathan_NC,Jonathan Miller,NC,INC-000188,1,1,2026-10-28,2026-10-28,,,,edp_call crisis_call,,
 morey_paul_MA,Paul Morey,MA,INC-000056,1,1,2026-09-10,2026-09-10,,,,competency crisis_call medication_lapse psych_medication mh_history diagnosis_named,bipolar disorder; post-traumatic stress disorder,
+morris_johnathan_PA,Johnathan Morris,PA,INC-000202,1,1,2023-02-06,2023-02-06,,,,police_brought_for_eval crisis_call mh_history,schizophrenia; post-traumatic stress disorder,
 neal_jonah_TN,Jonah Neal,TN,INC-000022,1,1,2026-05-21,2026-05-21,,,,crisis_call family_sought_help,,
 ogbodiegwu_benedict_TX,Benedict Chinedu Ogbodiegwu Jr.,TX,INC-000057,1,1,2026-09-07,2026-09-07,4,,,prior_custody_release prior_arrests competency,,
 page_edwin_NY,Edwin Page,NY,INC-000156,1,1,2025-04-25,2025-04-25,10,,,prior_arrests edp_call homeless mh_history,,1000681

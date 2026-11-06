@@ -1,11 +1,11 @@
 {
- "updated": "2026-11-05",
- "stories": 561,
+ "updated": "2026-11-06",
+ "stories": 562,
  "stories_strict": 463,
  "by_category": {
   "violent": 181,
   "unclassified": 147,
-  "smi": 134,
+  "smi": 135,
   "petty": 133
  },
  "offenders": 441,
@@ -24,9 +24,9 @@
   "GA": 13,
   "UT": 12,
   "SC": 11,
+  "PA": 11,
   "AR": 10,
   "NV": 10,
-  "PA": 10,
   "LA": 9,
   "CT": 8,
   "VA": 8,
@@ -110,7 +110,7 @@
   "NM": 1
  },
  "by_release_status": {
-  "none stated": 312,
+  "none stated": 313,
   "parole": 67,
   "bail/bond": 59,
   "probation": 40,
@@ -120,7 +120,7 @@
   "charges dropped": 2
  },
  "by_offense_type": {
-  "homicide": 127,
+  "homicide": 128,
   "assault": 99,
   "drug offense": 47,
   "shooting": 42,
@@ -140,7 +140,7 @@
   "carjacking": 2
  },
  "by_severity": {
-  "violent": 371,
+  "violent": 372,
   "property": 70,
   "drug": 47,
   "other": 40,
@@ -189,7 +189,7 @@
   "2022-08": 2,
   "2022-12": 2,
   "2023-01": 5,
-  "2023-02": 2,
+  "2023-02": 3,
   "2023-05": 1,
   "2023-06": 2,
   "2023-07": 4,
