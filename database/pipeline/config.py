@@ -22,11 +22,10 @@ BACKFILL_SEEN_URLS_JSON = BACKFILL_DIR / "seen_urls.json"
 BACKFILL_DONE_WEEKS_JSON = BACKFILL_DIR / "done_weeks.json"
 BACKFILL_ID_BASE = 1_000_000
 
-# The serious-mental-illness tracker (../smi/). Its incidents that meet its
-# inclusion rule and the publication rule are exported beside these stories
-# under the "smi" category (build_exports.py), with ids from SMI_ID_BASE up
-# (INC-000123 is 2000123). categorize.py also categorizes its incidents that
-# meet this database's rules, so they show under both categories.
+# The serious-mental-illness tracker (../smi/), the record set's second
+# harvester. Its incidents that meet its inclusion rule are records in the
+# "smi" category and nothing else (records.py), with ids from SMI_ID_BASE up
+# (INC-000123 is 2000123).
 SMI_DIR = REPO_ROOT.parent / "smi"
 SMI_INCIDENTS_CSV = SMI_DIR / "data" / "incidents.csv"
 SMI_REMOVED_CSV = SMI_DIR / "data" / "removed_incidents.csv"

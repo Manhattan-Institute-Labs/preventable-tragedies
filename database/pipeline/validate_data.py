@@ -1,29 +1,46 @@
-"""Validate data/ integrity before any workflow commit.
+"""Validate the whole record set before any workflow commit: both
+harvesters' files, and every record that could be published.
 
-Exits non-zero on: unparseable JSON, git conflict markers, duplicate ids,
-future dates, values outside the enum vocabularies, non-US states, missing
-evidence quotes, a strict flag that disagrees with the counts, or a wire /
-blotter primary source. Corruption can never be committed.
+    python pipeline/validate_data.py
+
+1. Files. This folder's data/: JSON parses, no git conflict markers, no
+   duplicate ids, daily and backfill ids in their own ranges, no id both
+   live and removed. The SMI tracker's ../smi/data: its own file checks
+   (../smi/pipeline/validate.py: the same integrity checks, plus codebook
+   values, a quote for every true signal, rule flags that agree with its
+   rules, and articles that point at real incidents), run in a separate
+   process because the two folders' modules share names.
+2. Records. Every record that could be published (records.candidates():
+   every story, and every qualifying SMI incident not kept off the site),
+   from either harvester, against one set of rules (row_problems): no
+   future or pre-2000 date, a US state, no one under 18, vocabularies, a
+   quote behind any release status or category, a strict flag that agrees
+   with the counts, no wire or blotter primary source. A repeat-offender
+   story must also show a prior record or release status and an arrest,
+   charge or conviction; an SMI record qualifies by its own rule instead.
+
+Exits non-zero, listing the problems, if anything fails. quarantine.py takes
+failing records off the site; a broken file can only be fixed or discarded.
+Corruption can never be committed.
 """
 
 import csv
 import json
 import re
+import subprocess
 import sys
 from datetime import date, timedelta
 
 from classify import qualifies_strict
 from config import (BACKFILL_ID_BASE, BACKFILL_STORIES_CSV, DATA_DIR, MIN_AGE, NEW_OFFENSE_TYPES,
-                    OFFENDER_CATEGORIES, OFFENSE_SEVERITIES, RELEASE_STATUSES, REMOVED_CSV, STORED_OUTCOME_RE,
-                    STORIES_CSV, US_STATES)
+                    OFFENDER_CATEGORIES, OFFENSE_SEVERITIES, RELEASE_STATUSES, REMOVED_CSV, SMI_DIR,
+                    STORED_OUTCOME_RE, STORIES_CSV, US_STATES)
+from records import SMI_CATEGORY, candidates, is_smi
 
 MARKERS = ("<<<<<<<", "=======", ">>>>>>>")
 BAD_SOURCE = re.compile(r"prnewswire|businesswire|globenewswire|einpresswire|press_release|"
                         r"press-release|arrests\.org|mugshots\.com|bustednewspaper", re.I)
-
-
-def fail(msg: str) -> None:
-    sys.exit(f"DATA VALIDATION FAILED: {msg}")
+CATEGORIES = [*OFFENDER_CATEGORIES, "pending", SMI_CATEGORY]
 
 
 def _int(v: str) -> int | None:
@@ -31,7 +48,8 @@ def _int(v: str) -> int | None:
 
 
 def row_problems(r: dict, horizon: str | None = None) -> list[str]:
-    """Every rule a single story row can break. Shared with quarantine.py."""
+    """Every rule a single record can break, whichever harvester found it.
+    Shared with quarantine.py."""
     horizon = horizon or (date.today() + timedelta(days=2)).isoformat()
     out = []
     v = r.get("incident_date") or ""
@@ -41,6 +59,8 @@ def row_problems(r: dict, horizon: str | None = None) -> list[str]:
         out.append(f"incident_date {v!r} is implausibly old")
     if r.get("state") and r["state"] not in US_STATES:
         out.append(f"state {r['state']!r} is not a US state")
+    if r.get("category") and r["category"] not in CATEGORIES:
+        out.append(f"category {r['category']!r} outside vocabulary")
     if r.get("new_offense_type") and r["new_offense_type"] not in NEW_OFFENSE_TYPES:
         out.append(f"new_offense_type {r['new_offense_type']!r} outside vocabulary")
     if r.get("new_offense_severity") and r["new_offense_severity"] not in OFFENSE_SEVERITIES:
@@ -55,7 +75,8 @@ def row_problems(r: dict, horizon: str | None = None) -> list[str]:
     else:
         if r["release_status"] != "none stated" and not r.get("release_evidence_quote"):
             out.append("release_status set without release_evidence_quote")
-        if not r.get("prior_evidence_quote") and r["release_status"] == "none stated":
+        if (not is_smi(r) and not r.get("prior_evidence_quote")
+                and r["release_status"] == "none stated"):
             out.append("no prior_evidence_quote and no release status")
     try:
         strict = qualifies_strict(_int(r.get("prior_count_arrests", "")),
@@ -69,59 +90,84 @@ def row_problems(r: dict, horizon: str | None = None) -> list[str]:
         out.append("wire/blotter primary source")
     if r.get("age") and r["age"].isdigit() and int(r["age"]) < MIN_AGE:
         out.append(f"subject is {r['age']}, under {MIN_AGE}")
-    if not re.search(STORED_OUTCOME_RE, r.get("outcome") or "", re.I):
+    if not is_smi(r) and not re.search(STORED_OUTCOME_RE, r.get("outcome") or "", re.I):
         out.append(f"outcome {r.get('outcome')!r}: not arrested, charged, or convicted")
     return out
 
 
-def main() -> None:
+def _rows(path) -> list[dict]:
+    with open(path, newline="", encoding="utf-8") as f:
+        return list(csv.DictReader(f))
+
+
+def file_problems() -> list[str]:
+    """This folder's data files."""
+    out = []
     for p in DATA_DIR.glob("*.json"):
         try:
-            json.load(open(p, encoding="utf-8"))
+            json.loads(p.read_text(encoding="utf-8"))
         except json.JSONDecodeError as e:
-            fail(f"{p.name} is not valid JSON: {e}")
-
+            out.append(f"{p.name} is not valid JSON: {e}")
     for p in list(DATA_DIR.glob("*.csv")) + list(DATA_DIR.glob("backfill/*.csv")):
         if p.name == "quarantine.csv":
             continue
-        text = p.read_text(encoding="utf-8")
-        for m in MARKERS:
-            if any(line.startswith(m) for line in text.splitlines()):
-                fail(f"{p.name} contains git conflict marker {m!r}")
-        rows = list(csv.DictReader(open(p, newline="", encoding="utf-8")))
-        ids = [r["id"] for r in rows if r.get("id")]
+        lines = p.read_text(encoding="utf-8").splitlines()
+        markers = [m for m in MARKERS if any(line.startswith(m) for line in lines)]
+        if markers:
+            out.append(f"{p.name} contains git conflict marker {markers[0]!r}")
+            continue
+        ids = [r["id"] for r in _rows(p) if r.get("id")]
         if len(ids) != len(set(ids)):
-            dupes = sorted({i for i in ids if ids.count(i) > 1})[:5]
-            fail(f"{p.name} has duplicate ids: {dupes}")
+            out.append(f"{p.name} has duplicate ids: {sorted({i for i in ids if ids.count(i) > 1})[:5]}")
+    if out:
+        return out   # the id checks below need files that parse
 
-    rows = []
-    for p in (STORIES_CSV, BACKFILL_STORIES_CSV):
-        if p.exists():
-            rows += list(csv.DictReader(open(p, newline="", encoding="utf-8")))
-    daily_ids = [int(r["id"]) for r in rows[:0]]
-    if STORIES_CSV.exists():
-        daily_ids = [int(r["id"]) for r in csv.DictReader(open(STORIES_CSV, newline="", encoding="utf-8"))]
-    if any(i >= BACKFILL_ID_BASE for i in daily_ids):
-        fail("stories.csv contains an id in the backfill range")
-    if BACKFILL_STORIES_CSV.exists():
-        bf_ids = [int(r["id"]) for r in csv.DictReader(open(BACKFILL_STORIES_CSV, newline="", encoding="utf-8"))]
-        if any(i < BACKFILL_ID_BASE for i in bf_ids):
-            fail("backfill/stories.csv contains an id below the backfill range")
-    all_ids = [r["id"] for r in rows]
+    daily = _rows(STORIES_CSV) if STORIES_CSV.exists() else []
+    backfill = _rows(BACKFILL_STORIES_CSV) if BACKFILL_STORIES_CSV.exists() else []
+    if any(int(r["id"]) >= BACKFILL_ID_BASE for r in daily):
+        out.append("stories.csv contains an id in the backfill range")
+    if any(int(r["id"]) < BACKFILL_ID_BASE for r in backfill):
+        out.append("backfill/stories.csv contains an id below the backfill range")
+    all_ids = [r["id"] for r in daily + backfill]
     if len(all_ids) != len(set(all_ids)):
-        fail("duplicate ids across stories.csv and backfill/stories.csv")
+        out.append("duplicate ids across stories.csv and backfill/stories.csv")
     if REMOVED_CSV.exists():
-        removed = {r["id"] for r in csv.DictReader(open(REMOVED_CSV, newline="", encoding="utf-8"))}
+        removed = {r["id"] for r in _rows(REMOVED_CSV)}
         if clash := sorted(removed & set(all_ids), key=int)[:5]:
-            fail(f"ids present in both removed.csv and a stories file: {clash}")
-    if not rows:
-        print("data validation OK (no stories yet)")
-        return
-    for r in rows:
-        for problem in row_problems(r):
-            fail(f"id {r.get('id')}: {problem}")
+            out.append(f"ids present in both removed.csv and a stories file: {clash}")
+    return out
 
-    print(f"data validation OK ({len(rows)} stories)")
+
+def smi_file_problems() -> list[str]:
+    """The SMI tracker's data files, checked by its own validator."""
+    run = SMI_DIR / "pipeline" / "run.py"
+    if not run.exists():
+        return []
+    res = subprocess.run([sys.executable, str(run), "validate"], cwd=SMI_DIR,
+                         capture_output=True, text=True)
+    if res.returncode == 0:
+        return []
+    lines = [ln.strip() for ln in (res.stdout + res.stderr).splitlines() if ln.strip()]
+    return [f"smi: {ln}" for ln in lines] or [f"smi: validator exited {res.returncode}"]
+
+
+def record_problems() -> list[str]:
+    return [f"id {r.get('id')}: {p}" for r in candidates() for p in row_problems(r)]
+
+
+def problems() -> list[str]:
+    files = file_problems()
+    # Records are only checked once this folder's files parse.
+    return files + smi_file_problems() + ([] if files else record_problems())
+
+
+def main() -> None:
+    found = problems()
+    if found:
+        for p in found[:30]:
+            print(f"  {p}")
+        sys.exit(f"DATA VALIDATION FAILED: {len(found)} problem(s)")
+    print(f"data validation OK ({len(candidates())} records)")
 
 
 if __name__ == "__main__":

@@ -24,11 +24,11 @@ STORIES_JSON = REPO_ROOT / "database" / "exports" / "stories.json"
 
 PAGES = ["index.html", "stories.html", "facts.html", "solve.html"]
 
-# Filter chips, keyed by the exports' `categories` vocabulary: the database's
+# Filter chips, keyed by the exports' `category` vocabulary. Categories are
+# discrete: each record has one. A repeat-offender story's is its
 # offender_category (set by database/pipeline/categorize.py from the prior
-# record; "pending" for rows the sweep hasn't reached yet), plus "smi" for
-# incidents from the serious-mental-illness tracker (smi/). A record can
-# carry several: a card shows under each.
+# record; "pending" for rows the sweep hasn't reached yet); a
+# serious-mental-illness incident's (smi/) is always "smi".
 CATEGORIES = {
     "violent": "Frequent violent offender",
     "petty": "Very frequent petty offender",
@@ -137,9 +137,9 @@ def system_contacts(row: dict) -> list[dict]:
 
 
 def to_story(row: dict) -> dict:
-    categories = row.get("categories") or [row.get("offender_category") or "pending"]
+    category = row.get("category") or "pending"
     stated = counts(row)
-    if "smi" in categories:
+    if category == "smi":
         stated += system_contacts(row)
     stated += [{"count": "—", "label": "no other count stated"}] * 2
     status = STATUS_LABELS.get(row["release_status"], "")
@@ -151,8 +151,7 @@ def to_story(row: dict) -> dict:
         "state": row["state"],
         "date": row["incident_date"],
         "dateLabel": date_label(row["incident_date"]),
-        "category": categories[0],
-        "categories": categories,
+        "category": category,
         "headline": headline(row),
         "summary": row["summary"],
         "priorArrests": row["prior_count_arrests"],
@@ -168,7 +167,7 @@ def to_story(row: dict) -> dict:
 def build() -> None:
     rows = json.loads(STORIES_JSON.read_text(encoding="utf-8"))
     stories = [to_story(r) for r in rows]
-    used = {c for s in stories for c in s["categories"]}
+    used = {s["category"] for s in stories}
 
     if OUT_DIR.exists():
         shutil.rmtree(OUT_DIR)
