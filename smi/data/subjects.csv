@@ -116,7 +116,7 @@ mcmaster_jeffrey_CA,Jeffrey McMaster Jr.,CA,INC-000173,1,1,2026-02-03,2026-02-03
 miller_jonathan_NC,Jonathan Miller,NC,INC-000188,1,1,2026-10-28,2026-10-28,,,,edp_call crisis_call,,
 mohassib_sayed_NY,Sayed Mohassib,NY,INC-000203,1,1,2026-10-30,2026-10-30,,,,prior_hospital_discharge police_brought_for_eval prior_police_contact prior_arrests crisis_call family_sought_help psych_medication mh_history,,
 morey_paul_MA,Paul Morey,MA,INC-000056,1,1,2026-09-10,2026-09-10,,,,competency crisis_call medication_lapse psych_medication mh_history diagnosis_named,bipolar disorder; post-traumatic stress disorder,
-morris_johnathan_PA,Johnathan Morris,PA,INC-000202,1,1,2023-02-06,2023-02-06,,,,police_brought_for_eval crisis_call mh_history,schizophrenia; post-traumatic stress disorder,
+morris_johnathan_PA,Johnathan Morris,PA,INC-000202,1,1,2023-02-06,2023-02-06,,,,police_brought_for_eval crisis_call family_sought_help mh_history diagnosis_named,schizophrenia; post-traumatic stress disorder; delusional disorder,
 neal_jonah_TN,Jonah Neal,TN,INC-000022,1,1,2026-05-21,2026-05-21,,,,crisis_call family_sought_help,,
 ogbodiegwu_benedict_TX,Benedict Chinedu Ogbodiegwu Jr.,TX,INC-000057,1,1,2026-09-07,2026-09-07,4,,,prior_custody_release prior_arrests competency,,
 page_edwin_NY,Edwin Page,NY,INC-000156,1,1,2025-04-25,2025-04-25,10,,,prior_arrests edp_call homeless mh_history,,1000681
@@ -149,6 +149,7 @@ seth_shaquan_NY,Shaquan Seth,NY,INC-000179,1,1,2026-06-17,2026-06-17,150,,,prior
 sevedra_christopher_TX,Christopher Sevedra,TX,INC-000116,1,1,2026-10-12,2026-10-12,,,,police_brought_for_eval competency,,
 shamim_wahiduzzaman_,Wahiduzzaman Shamim,,INC-000128,1,0,2026-10-13,2026-10-13,,,,mh_history,,
 shimon_keynes_NY,Keynes Shimon,NY,INC-000049,1,1,2026-09-14,2026-09-14,,,,police_brought_for_eval edp_call crisis_call homeless mh_history,,
+siders_elizabeth_OH,Elizabeth Siders,OH,INC-000204,1,1,2024-12,2024-12,,,,competency mh_history,,
 soto_christopher_FL,Christopher Soto,FL,INC-000017,1,1,2023-06-25,2023-06-25,,,,prior_hospital_discharge psych_medication mh_history diagnosis_named,schizophrenia; delusional disorder,
 soto_victor_NY,Victor Soto,NY,INC-000193,1,1,2026-11-02,2026-11-02,8,,,prior_police_contact prior_arrests edp_call,,
 strube_korby_KS,Korby Allen Strube,KS,INC-000055,1,1,2026-07-31,2026-07-31,,,,mh_history,,
