@@ -1,14 +1,14 @@
 {
- "updated": "2026-11-10",
- "stories": 567,
- "stories_strict": 467,
+ "updated": "2026-11-11",
+ "stories": 569,
+ "stories_strict": 468,
  "by_category": {
   "violent": 182,
   "unclassified": 148,
-  "smi": 136,
-  "petty": 135
+  "smi": 137,
+  "petty": 136
  },
- "offenders": 444,
+ "offenders": 445,
  "offenders_multiple_incidents": 8,
  "by_state": {
   "NY": 129,
@@ -18,13 +18,13 @@
   "TX": 25,
   "IL": 24,
   "MA": 22,
+  "OH": 20,
   "WA": 19,
-  "OH": 19,
   "NC": 18,
   "GA": 13,
   "UT": 12,
+  "PA": 12,
   "SC": 11,
-  "PA": 11,
   "AR": 10,
   "NV": 10,
   "LA": 9,
@@ -80,12 +80,12 @@
   "CT": 7,
   "MN": 7,
   "VA": 7,
+  "PA": 5,
   "VT": 4,
   "ME": 4,
   "WY": 4,
   "MD": 4,
   "OR": 4,
-  "PA": 4,
   "TN": 4,
   "CO": 4,
   "NE": 4,
@@ -110,7 +110,7 @@
   "NM": 1
  },
  "by_release_status": {
-  "none stated": 316,
+  "none stated": 318,
   "parole": 68,
   "bail/bond": 60,
   "probation": 40,
@@ -128,10 +128,10 @@
   "other": 37,
   "burglary": 27,
   "theft/larceny": 25,
-  "weapons offense": 21,
+  "weapons offense": 22,
   "robbery": 20,
   "DUI/vehicular": 18,
-  "child abuse": 11,
+  "child abuse": 12,
   "fraud": 9,
   "vehicle theft": 9,
   "kidnapping": 7,
@@ -140,11 +140,11 @@
   "carjacking": 2
  },
  "by_severity": {
-  "violent": 375,
+  "violent": 376,
   "property": 72,
   "drug": 47,
   "other": 40,
-  "weapons": 21
+  "weapons": 22
  },
  "by_month": {
   "2009-05": 1,
@@ -225,7 +225,7 @@
   "2026-03": 24,
   "2026-04": 26,
   "2026-05": 27,
-  "2026-06": 13,
+  "2026-06": 15,
   "2026-07": 29,
   "2026-08": 30,
   "2026-09": 34,
