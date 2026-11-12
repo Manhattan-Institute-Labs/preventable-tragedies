@@ -1,11 +1,11 @@
 {
- "updated": "2026-11-11",
- "stories": 569,
+ "updated": "2026-11-12",
+ "stories": 570,
  "stories_strict": 468,
  "by_category": {
   "violent": 182,
   "unclassified": 148,
-  "smi": 137,
+  "smi": 138,
   "petty": 136
  },
  "offenders": 445,
@@ -17,7 +17,7 @@
   "MI": 25,
   "TX": 25,
   "IL": 24,
-  "MA": 22,
+  "MA": 23,
   "OH": 20,
   "WA": 19,
   "NC": 18,
@@ -110,7 +110,7 @@
   "NM": 1
  },
  "by_release_status": {
-  "none stated": 318,
+  "none stated": 319,
   "parole": 68,
   "bail/bond": 60,
   "probation": 40,
@@ -214,7 +214,7 @@
   "2025-04": 14,
   "2025-05": 17,
   "2025-06": 12,
-  "2025-07": 18,
+  "2025-07": 19,
   "2025-08": 9,
   "2025-09": 11,
   "2025-10": 19,
