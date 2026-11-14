@@ -10,9 +10,17 @@ were free at the time because of a release decision (bail, bond, probation, paro
 release, early release, dropped charges).
 
 The backend follows [flock-crime-tracker](https://github.com/CharlesFainLehman/flock-crime-tracker).
-The front end is the site in [`../site/`](../site/), whose `build.py` reads `exports/stories.json`; the pipeline
-writes `exports/stories.json`, `exports/offenders.json`, and `exports/stats.json` for it, with the
-serious-mental-illness tracker's incidents ([`../smi/`](../smi/)) merged in (see Offender categories).
+The front end is the site in [`../site/`](../site/), whose `build.py` reads `exports/stories.json`.
+
+**One record set, two harvesters.** This pipeline finds repeat offenders; the
+serious-mental-illness tracker in [`../smi/`](../smi/) finds people with serious mental illness.
+Both feed one record set ([pipeline/records.py](pipeline/records.py)), and everything after the
+harvest works on that set, not on either harvester's files: one validator
+(`pipeline/validate_data.py`, run through `pipeline/check_data.sh` by every data workflow), one
+quarantine, one set of exports (`exports/stories.json`, `offenders.json`, `stats.json`), one
+people list, and one category per record (see Offender categories). The person key and the
+publication rule are in [pipeline/shared.py](pipeline/shared.py), which the SMI tracker loads
+rather than copying.
 
 Everything here lives in `database/`, and paths below are relative to it. The GitHub Actions
 workflows are in the repo-root `.github/workflows/` and run with `database/` as their working
@@ -119,8 +127,10 @@ One row per new-offense incident in `data/stories.csv`:
 | `source_name`, `source_url`, `additional_sources`, `confidence` | |
 | `offender_category`, `category_reason` | `violent`, `petty`, or `unclassified`, from the prior record (see below); blank until categorized |
 
-`data/offenders.csv` has one row per `offender_key`: name, state, story ids, incident count,
-first and last incident date, max prior counts, strict flag. Never edit it by hand.
+`data/offenders.csv` has one row per `offender_key` across the whole record set (a
+serious-mental-illness subject the incident harmed, rather than accused, is not listed): name,
+state, record ids, incident count, first and last incident date, latest prior counts, strict
+flag. Never edit it by hand.
 
 ## Offender categories
 
@@ -147,14 +157,14 @@ are categorized in the daily job; `Categorize (manual)` sweeps the database (`re
 every row, e.g. after a rule change).
 
 **Serious mental illness** is the third category, from the tracker in [`../smi/`](../smi/),
-which runs in the same daily job with its own inclusion rule (see its README). In `exports/`,
-every record has `categories`: its `offender_category` (or `pending`), plus `smi` when the SMI
-tracker has the same incident (a shared source article, or the same person key within 21
-days). An SMI incident with no story here becomes its own record, id `SMI_ID_BASE` (2,000,000)
-plus its number, with `smi` first. `categorize.py` also categorizes SMI incidents that meet
-this database's rules (`repeat_offender_rules` in `../smi/data/incidents.csv`), so those show
-under both. SMI incidents never enter `data/stories.csv` or `offenders.csv`; they are merged
-only in `exports/`, under the same publication rule.
+which runs in the same daily job with its own inclusion rule (see its README). Categories are
+discrete: every record in `exports/` has one `category`. A story's is its `offender_category`
+(or `pending`); a qualifying SMI incident's is `smi`, whatever the subject's record, and
+`categorize.py` never touches SMI incidents. An SMI record's id is `SMI_ID_BASE` (2,000,000)
+plus its number. When both harvesters have the same incident (a shared source article, or the
+same person key within 21 days) and the SMI record is publishable, only the SMI record is
+shown: the story stays in `data/stories.csv`, and `exports/removed.json` points its id to the
+SMI record (`"see"`). Both are held to the same publication rule and the same validation.
 
 ## Caveats
 

@@ -3,31 +3,17 @@ seen-URL cache, the harvest windows, and subject keys."""
 
 import csv
 import json
-import re
-import unicodedata
 from datetime import date
 from pathlib import Path
 
 from config import (ARTICLE_COLUMNS, ARTICLES_CSV, CROSSLIST_CHECKED_JSON, HARVEST_WINDOWS_JSON,
                     INCIDENT_COLUMNS, INCIDENTS_CSV, REMOVED_INCIDENTS_CSV, SEEN_URLS_JSON,
-                    SIGNAL_FIELDS, SUBJECT_COLUMNS, SUBJECTS_CSV)
+                    SIGNAL_FIELDS, SUBJECT_COLUMNS, SUBJECTS_CSV, repeat_offender_module)
 
-_SUFFIXES = {"jr", "sr", "ii", "iii", "iv", "v"}
-
-
-def subject_key(name: str | None, state: str | None) -> str:
-    """Normalized person key: last name, first name, state. Built exactly like
-    ../database/pipeline/store.py:offender_key, so the same person gets the
-    same key in both databases. Dedupe confirms a match; this only nominates
-    candidates. Empty if there is no name."""
-    if not name:
-        return ""
-    s = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
-    s = re.sub(r"[^a-z\s]", " ", s.lower())
-    parts = [p for p in s.split() if p not in _SUFFIXES]
-    if len(parts) < 2:
-        return ""
-    return f"{parts[-1]}_{parts[0]}_{(state or '').upper()}"
+# The person key is ../database/pipeline/shared.py:person_key, the function
+# that makes offender_key, so the same person gets the same key from either
+# harvester. Dedupe confirms a match; the key only nominates candidates.
+subject_key = repeat_offender_module("shared").person_key
 
 
 def load_rows(path: Path) -> list[dict]:
