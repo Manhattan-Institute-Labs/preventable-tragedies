@@ -1,17 +1,17 @@
 {
- "updated": "2026-11-16",
- "stories": 573,
- "stories_strict": 470,
+ "updated": "2026-11-17",
+ "stories": 575,
+ "stories_strict": 472,
  "by_category": {
-  "violent": 183,
+  "violent": 184,
   "unclassified": 148,
   "smi": 140,
-  "petty": 137
+  "petty": 138
  },
- "offenders": 447,
+ "offenders": 449,
  "offenders_multiple_incidents": 8,
  "by_state": {
-  "NY": 129,
+  "NY": 131,
   "FL": 62,
   "CA": 41,
   "TX": 26,
@@ -61,7 +61,7 @@
   "NM": 1
  },
  "by_state_strict": {
-  "NY": 115,
+  "NY": 117,
   "FL": 51,
   "CA": 33,
   "TX": 24,
@@ -110,9 +110,9 @@
   "NM": 1
  },
  "by_release_status": {
-  "none stated": 321,
+  "none stated": 322,
   "parole": 68,
-  "bail/bond": 61,
+  "bail/bond": 62,
   "probation": 40,
   "early release": 38,
   "supervised release": 32,
@@ -121,7 +121,7 @@
  },
  "by_offense_type": {
   "homicide": 129,
-  "assault": 100,
+  "assault": 101,
   "drug offense": 48,
   "sexual assault": 42,
   "shooting": 42,
@@ -130,7 +130,7 @@
   "theft/larceny": 25,
   "weapons offense": 22,
   "robbery": 20,
-  "DUI/vehicular": 18,
+  "DUI/vehicular": 19,
   "child abuse": 12,
   "fraud": 9,
   "vehicle theft": 9,
@@ -140,10 +140,10 @@
   "carjacking": 2
  },
  "by_severity": {
-  "violent": 377,
+  "violent": 378,
   "property": 73,
   "drug": 48,
-  "other": 40,
+  "other": 41,
   "weapons": 22
  },
  "by_month": {
@@ -169,6 +169,7 @@
   "2018-09": 1,
   "2018-10": 1,
   "2019-02": 1,
+  "2020-01": 1,
   "2020-03": 1,
   "2020-05": 1,
   "2020-06": 1,
@@ -227,7 +228,7 @@
   "2026-04": 26,
   "2026-05": 27,
   "2026-06": 15,
-  "2026-07": 30,
+  "2026-07": 31,
   "2026-08": 30,
   "2026-09": 34,
   "2026-10": 33,
