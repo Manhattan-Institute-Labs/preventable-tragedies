@@ -10435,5 +10435,152 @@
    "gdelt_capped": false,
    "gnews": 26
   }
+ },
+ "2026-11-18": {
+  "\"arrested\" \"times before\"": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 25
+  },
+  "\"arrests\" \"criminal history\" charged": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 16
+  },
+  "\"career criminal\" arrested": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 24
+  },
+  "\"cashless bail\" arrested": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 11
+  },
+  "\"charges dropped\" arrested again": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 33
+  },
+  "\"criminal record\" arrested again": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 0
+  },
+  "\"extensive criminal history\"": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 41
+  },
+  "\"felony convictions\" arrested": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 22
+  },
+  "\"free on bond\" arrested": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 34
+  },
+  "\"habitual offender\" charged": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 33
+  },
+  "\"lengthy criminal history\"": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 42
+  },
+  "\"long criminal history\" arrested": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 50
+  },
+  "\"no bail\" arrested again": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 10
+  },
+  "\"on parole\" arrested": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 40
+  },
+  "\"on probation\" arrested": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 49
+  },
+  "\"out on bail\" arrested": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 65
+  },
+  "\"out on bond\" arrested": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 67
+  },
+  "\"pretrial release\" arrested": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 33
+  },
+  "\"previously convicted\" arrested": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 26
+  },
+  "\"prior arrests\" charged": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 33
+  },
+  "\"prior convictions\" arrested": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 21
+  },
+  "\"prior convictions\" charged": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 20
+  },
+  "\"prolific offender\"": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 29
+  },
+  "\"released early\" arrested": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 24
+  },
+  "\"released on bond\" arrested": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 60
+  },
+  "\"released without bail\" arrested": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 45
+  },
+  "\"repeat offender\" arrested": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 51
+  },
+  "\"repeat offender\" charged": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 36
+  },
+  "\"supervised release\" arrested": {
+   "gdelt": 0,
+   "gdelt_capped": false,
+   "gnews": 27
+  }
  }
 }

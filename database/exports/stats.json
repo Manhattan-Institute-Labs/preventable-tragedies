@@ -1,17 +1,17 @@
 {
- "updated": "2026-11-17",
- "stories": 575,
- "stories_strict": 472,
+ "updated": "2026-11-18",
+ "stories": 577,
+ "stories_strict": 473,
  "by_category": {
   "violent": 184,
-  "unclassified": 148,
-  "smi": 140,
+  "unclassified": 149,
+  "smi": 142,
   "petty": 138
  },
  "offenders": 449,
  "offenders_multiple_incidents": 8,
  "by_state": {
-  "NY": 131,
+  "NY": 132,
   "FL": 62,
   "CA": 41,
   "TX": 26,
@@ -29,8 +29,8 @@
   "LA": 10,
   "NV": 10,
   "CT": 8,
+  "MN": 8,
   "VA": 8,
-  "MN": 7,
   "HI": 6,
   "KS": 6,
   "VT": 5,
@@ -61,7 +61,7 @@
   "NM": 1
  },
  "by_state_strict": {
-  "NY": 117,
+  "NY": 118,
   "FL": 51,
   "CA": 33,
   "TX": 24,
@@ -110,7 +110,7 @@
   "NM": 1
  },
  "by_release_status": {
-  "none stated": 322,
+  "none stated": 324,
   "parole": 68,
   "bail/bond": 62,
   "probation": 40,
@@ -121,9 +121,9 @@
  },
  "by_offense_type": {
   "homicide": 129,
-  "assault": 101,
+  "assault": 102,
   "drug offense": 48,
-  "sexual assault": 42,
+  "sexual assault": 43,
   "shooting": 42,
   "other": 38,
   "burglary": 27,
@@ -140,7 +140,7 @@
   "carjacking": 2
  },
  "by_severity": {
-  "violent": 378,
+  "violent": 380,
   "property": 73,
   "drug": 48,
   "other": 41,
@@ -204,7 +204,7 @@
   "2024-04": 3,
   "2024-05": 1,
   "2024-06": 1,
-  "2024-07": 3,
+  "2024-07": 4,
   "2024-08": 3,
   "2024-09": 4,
   "2024-10": 3,
@@ -232,6 +232,6 @@
   "2026-08": 30,
   "2026-09": 34,
   "2026-10": 33,
-  "2026-11": 5
+  "2026-11": 6
  }
 }
