@@ -1,11 +1,11 @@
 {
- "updated": "2026-11-19",
- "stories": 580,
+ "updated": "2026-11-20",
+ "stories": 581,
  "stories_strict": 473,
  "by_category": {
   "violent": 184,
   "unclassified": 149,
-  "smi": 145,
+  "smi": 146,
   "petty": 138
  },
  "offenders": 449,
@@ -36,6 +36,7 @@
   "KS": 6,
   "VT": 5,
   "TN": 5,
+  "NE": 5,
   "ND": 4,
   "ME": 4,
   "WY": 4,
@@ -43,7 +44,6 @@
   "IN": 4,
   "CO": 4,
   "AZ": 4,
-  "NE": 4,
   "OK": 3,
   "NH": 3,
   "KY": 3,
@@ -110,7 +110,7 @@
   "NM": 1
  },
  "by_release_status": {
-  "none stated": 327,
+  "none stated": 328,
   "parole": 68,
   "bail/bond": 62,
   "probation": 40,
@@ -120,7 +120,7 @@
   "charges dropped": 2
  },
  "by_offense_type": {
-  "homicide": 130,
+  "homicide": 131,
   "assault": 102,
   "drug offense": 48,
   "sexual assault": 43,
@@ -140,7 +140,7 @@
   "carjacking": 2
  },
  "by_severity": {
-  "violent": 381,
+  "violent": 382,
   "property": 73,
   "drug": 48,
   "other": 42,
@@ -212,7 +212,7 @@
   "2024-12": 8,
   "2025-01": 12,
   "2025-02": 13,
-  "2025-03": 11,
+  "2025-03": 12,
   "2025-04": 14,
   "2025-05": 17,
   "2025-06": 12,
