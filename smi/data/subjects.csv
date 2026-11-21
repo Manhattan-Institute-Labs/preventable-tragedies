@@ -3,6 +3,7 @@ brown_tyler_MA,Tyler E. Brown IV,MA,INC-000036 INC-000034,2,2,2025-05-11,2026-05
 mock_angelynn_KS,Angelynn Mock,KS,INC-000026 INC-000109,2,2,2025-10-31,2025-10-31,,,,competency crisis_call family_sought_help mh_history diagnosis_named,schizoaffective disorder; bipolar disorder,
 rizzo_james_NY,James Rizzo,NY,INC-000170 INC-000169,2,2,2024-12-02,2025-11-25,16,,,prior_custody_release police_brought_for_eval prior_arrests homeless mh_history,,82 161 1002007
 robinson_jasmine_CA,Jasmine Robinson,CA,INC-000037 INC-000013,2,2,2016-09-03,2026-09-02,,,,edp_call crisis_call,,
+savage_nicole_MI,Nicole Savage,MI,INC-000226 INC-000224,2,2,2024-10-27,2026-10-27,,,,prior_hospital_discharge prior_custody_release prior_arrests competency family_sought_help medication_lapse psych_medication mh_history,schizophrenic bipolar disorder; schizoaffective disorder; bipolar disorder,
 anderson_vito_NJ,Vito Anderson,NJ,INC-000175,1,1,2026-03-12,2026-03-12,,16,,prior_custody_release prior_arrests homeless mh_history,,1002550
 babb_jessica_PA,Jessica Babb,PA,INC-000094,1,1,2026-07,2026-07,,,,prior_hospital_discharge prior_custody_release,,
 babidi_ayham_IL,Ayham Babidi,IL,INC-000041,1,1,2026-09-10,2026-09-10,,,,prior_hospital_discharge police_brought_for_eval prior_police_contact crisis_call family_sought_help mh_history,bipolar disorder,
@@ -12,6 +13,7 @@ benton_amanda_LA,Amanda Benton,LA,INC-000210,1,1,2022-06-05,2022-06-05,,,,compet
 blair_selma_NY,Selma Blair,NY,INC-000119,1,1,2026-10-11,2026-10-11,,,,prior_hospital_discharge prior_custody_release police_brought_for_eval crisis_call medication_lapse psych_medication mh_history,,
 blanco_nelson_RI,Nelson Blanco,RI,INC-000112,1,1,2026-10-08,2026-10-08,3,,,prior_hospital_discharge prior_custody_release prior_arrests competency homeless mh_history,intellectual disability disorder; schizophrenia,
 boissard_christopher_NY,Christopher Boissard,NY,INC-000216,1,1,2024-07-05,2024-07-05,39,1,,prior_arrests mh_history,,
+bolter_james_NE,James Bolter III,NE,INC-000225,1,0,2026-05-29,2026-05-29,,,,crisis_call,,
 borow_joseph_FL,Joseph Borow,FL,INC-000073,1,1,2026-09-10,2026-09-10,,,,police_brought_for_eval,,
 bottom_chaun_NY,Chaun Bottom,NY,INC-000023,1,1,2026-09-04,2026-09-04,0,,,prior_arrests edp_call crisis_call,,
 boucher_david_MA,David Louis Boucher,MA,INC-000140,1,1,2026-05-11,2026-05-11,,,,mh_history,,
@@ -88,6 +90,7 @@ hartman_glenn_FL,Glenn Stuart Hartman,FL,INC-000047,1,1,2026-09-13,2026-09-13,,,
 hawkins_victor_OK,Victor Hawkins,OK,INC-000090,1,1,2026-04-07,2026-04-07,,,,prior_custody_release competency mh_history,,
 haynes_joseph_IL,Joseph Haynes,IL,INC-000214,1,1,2026-09-17,2026-09-17,,,,prior_custody_release prior_arrests,,
 hermesch_gary_KS,Gary Hermesch,KS,INC-000015,1,1,2025-04-03,2025-04-03,,,,police_brought_for_eval competency,,
+hightower_jamie_WA,Jamie S. Hightower,WA,INC-000223,1,1,2026-07-20,2026-07-20,,,,prior_hospital_discharge prior_custody_release prior_arrests crisis_call,,
 hilton_perez_FL,Perez Hilton,FL,INC-000218,1,1,2026-08-04,2026-08-04,,,,prior_hospital_discharge police_brought_for_eval crisis_call,,
 hinton_rodney_OH,Rodney Hinton Jr.,OH,INC-000145,1,1,2025-05-02,2025-05-02,,,,diagnosis_named,schizoaffective disorder,
 ho_joshua_HI,Joshua Ho,HI,INC-000007,1,1,2023-01-16,2023-01-16,,,,competency crisis_call mh_history,schizophrenia,
@@ -99,6 +102,7 @@ jackson_james_MI,James William Jackson,MI,INC-000114,1,1,2026-07-19,2026-07-19,,
 jackson_quantae_IN,Quantae A. Jackson,IN,INC-000187,1,1,2026-10-28,2026-10-28,2,,,prior_arrests,,
 jalloh_abdul_VA,Abdul Jalloh,VA,INC-000174,1,1,2026-02-23,2026-02-23,30,1,,prior_custody_release prior_police_contact prior_arrests mh_history,,45
 jarrett_terrell_NY,Terrell Jarrett,NY,INC-000177,1,1,2026-05-31,2026-05-31,6,,,police_brought_for_eval prior_arrests,,1003160
+jeddou_khaled_UT,Khaled Saleh Jeddou,UT,INC-000222,1,1,2026-11-15,2026-11-15,64,,,prior_arrests competency mh_history,,918
 jones_amy_WI,Amy Jones,WI,INC-000108,1,1,2026-09-24,2026-09-24,0,,,prior_hospital_discharge prior_arrests medication_lapse psych_medication mh_history diagnosis_named,bipolar disorder,
 jones_sean_NY,Sean Jones,NY,INC-000172,1,1,2026-01-06,2026-01-06,24,,,police_brought_for_eval prior_arrests competency,,77
 king_demonte_MN,Demonte Tyvell King,MN,INC-000068,1,1,2024-12-18,2024-12-18,,,,prior_hospital_discharge competency medication_lapse psych_medication homeless diagnosis_named,schizophrenia,

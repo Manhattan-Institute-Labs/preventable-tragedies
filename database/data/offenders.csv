@@ -1,5 +1,6 @@
 offender_key,offender_name,state,story_ids,incident_count,first_incident_date,last_incident_date,latest_prior_arrests,latest_prior_convictions,latest_prior_felony_convictions,qualifies_strict
 rizzo_james_NY,James Rizzo,NY,82 161 1002007,3,2024-12-02,2025-12-02,16,2,1,yes
+call_rex_ME,Rex Allen Call Jr.,ME,111 917,2,2025-11-13,2026-05-26,,20,,yes
 gooding_harold_NY,Harold Gooding,NY,642 1000737,2,2024-03-28,2025-04-30,134,,3,yes
 livingston_william_IL,William Livingston,IL,1001961 1001243,2,2025-06-12,2025-08-19,17,,,yes
 lopez_joshua_NV,Joshua Sanchez-Lopez,NV,26 35,2,2026-01,2026-03-18,35,1,1,yes
@@ -70,7 +71,6 @@ caines_kamieo_NY,Kamieo Caines,NY,1001226,1,2025-08-18,2025-08-18,20,2,2,yes
 calderon_antonio_MA,Antonio Calderon,MA,1001930,1,2025,2025,31,13,,yes
 calderon_samuel_NY,Samuel Calderon,NY,1002283,1,2026-01-25,2026-01-25,25,,,yes
 caldwell_christopher_NC,Christopher Cornelius Caldwell,NC,97,1,2026-04-27,2026-04-27,,12,6,yes
-call_rex_ME,Rex Allen Call Jr.,ME,111,1,2025-11-13,2025-11-13,,20,,yes
 camacho_ryan_NC,Ryan Camacho,NC,1002173,1,2026-01-04,2026-01-04,24,2,1,yes
 campana_kevin_FL,Kevin Campana,FL,739,1,2024-12-23,2024-12-23,34,,,yes
 campbell_donnie_MD,Donnie David Campbell,MD,1000076,1,2025-01-02,2025-01-02,,3,3,yes
@@ -216,6 +216,7 @@ jacques_mike_FL,Mike Kevin Jacques,FL,1000269,1,2025-02-12,2025-02-12,8,,,yes
 jalloh_abdul_VA,Abdul Jalloh,VA,45,1,2026-02-23,2026-02-23,30,1,1,yes
 james_sterling_NE,Sterling James,NE,1002270,1,2026-01-15,2026-01-15,,3,3,yes
 jarrett_terrell_NY,Terrell Jarrett,NY,1003160,1,2026-05-31,2026-05-31,6,,,yes
+jeddou_khaled_UT,Khaled Saleh Jeddou,UT,918,1,2026-11-15,2026-11-15,64,,,yes
 jenkinson_daniel_IL,Daniel J. Jenkinson,IL,1000184,1,2025-01-30,2025-01-30,,4,4,yes
 jesus_eduardo_IL,Eduardo De Jesus,IL,1002855,1,2026-03-31,2026-03-31,60,,7,yes
 jimenez_joseph_UT,"Joseph Richard Jimenez, Jr.",UT,743,1,2025-07-04,2025-07-04,33,21,,yes
@@ -262,6 +263,7 @@ mackey_rashad_WA,Rashad Mackey,WA,1003368,1,2026-07-05,2026-07-05,,10,10,yes
 madison_damien_WA,Damien Madison,WA,1000736,1,2025-05-16,2025-05-16,,9,9,yes
 maisonet_patrick_WA,Patrick Maisonet,WA,1001189,1,2025-08-21,2025-08-21,12,,,yes
 maldonado_jonathan_NY,Jonathan Maldonado,NY,913,1,2026-07-21,2026-07-21,,3,3,yes
+mallette_gary_NY,Gary Mallette,NY,919,1,2019-03-09,2019-03-09,50,,,yes
 mann_michael_OH,Michael Mann,OH,818,1,2018-10,2018-10,54,,,yes
 mara_timothy_NH,Timothy O'Mara,NH,1003448,1,2026-07-13,2026-07-13,8,,1,yes
 marmol_veronica_NY,Veronica Marmol,NY,1000023,1,2025-01-01,2025-01-01,,9,,yes

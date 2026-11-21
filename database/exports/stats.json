@@ -1,17 +1,17 @@
 {
- "updated": "2026-11-20",
- "stories": 581,
- "stories_strict": 473,
+ "updated": "2026-11-21",
+ "stories": 584,
+ "stories_strict": 476,
  "by_category": {
-  "violent": 184,
-  "unclassified": 149,
-  "smi": 146,
-  "petty": 138
+  "violent": 185,
+  "unclassified": 150,
+  "smi": 147,
+  "petty": 139
  },
- "offenders": 449,
- "offenders_multiple_incidents": 8,
+ "offenders": 451,
+ "offenders_multiple_incidents": 9,
  "by_state": {
-  "NY": 132,
+  "NY": 133,
   "FL": 64,
   "CA": 41,
   "TX": 26,
@@ -21,8 +21,8 @@
   "OH": 20,
   "WA": 19,
   "NC": 18,
+  "UT": 13,
   "GA": 13,
-  "UT": 12,
   "PA": 12,
   "SC": 11,
   "AR": 10,
@@ -35,10 +35,10 @@
   "HI": 6,
   "KS": 6,
   "VT": 5,
+  "ME": 5,
   "TN": 5,
   "NE": 5,
   "ND": 4,
-  "ME": 4,
   "WY": 4,
   "OR": 4,
   "IN": 4,
@@ -61,7 +61,7 @@
   "NM": 1
  },
  "by_state_strict": {
-  "NY": 118,
+  "NY": 119,
   "FL": 51,
   "CA": 33,
   "TX": 24,
@@ -69,7 +69,7 @@
   "IL": 19,
   "WA": 18,
   "NC": 16,
-  "UT": 12,
+  "UT": 13,
   "MA": 12,
   "GA": 12,
   "OH": 11,
@@ -80,9 +80,9 @@
   "CT": 7,
   "MN": 7,
   "VA": 7,
+  "ME": 5,
   "PA": 5,
   "VT": 4,
-  "ME": 4,
   "WY": 4,
   "MD": 4,
   "OR": 4,
@@ -110,9 +110,9 @@
   "NM": 1
  },
  "by_release_status": {
-  "none stated": 328,
+  "none stated": 330,
   "parole": 68,
-  "bail/bond": 62,
+  "bail/bond": 63,
   "probation": 40,
   "early release": 38,
   "supervised release": 32,
@@ -121,9 +121,9 @@
  },
  "by_offense_type": {
   "homicide": 131,
-  "assault": 102,
+  "assault": 104,
   "drug offense": 48,
-  "sexual assault": 43,
+  "sexual assault": 44,
   "shooting": 42,
   "other": 38,
   "burglary": 27,
@@ -140,7 +140,7 @@
   "carjacking": 2
  },
  "by_severity": {
-  "violent": 382,
+  "violent": 385,
   "property": 73,
   "drug": 48,
   "other": 42,
@@ -169,6 +169,7 @@
   "2018-09": 1,
   "2018-10": 1,
   "2019-02": 1,
+  "2019-03": 1,
   "2020-01": 1,
   "2020-03": 1,
   "2020-05": 1,
@@ -226,12 +227,12 @@
   "2026-02": 15,
   "2026-03": 24,
   "2026-04": 26,
-  "2026-05": 27,
+  "2026-05": 28,
   "2026-06": 15,
   "2026-07": 31,
   "2026-08": 31,
   "2026-09": 34,
   "2026-10": 33,
-  "2026-11": 7
+  "2026-11": 8
  }
 }
