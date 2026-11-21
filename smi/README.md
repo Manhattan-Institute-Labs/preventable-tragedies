@@ -8,6 +8,13 @@ that meet the inclusion rule are published on the site as the **Serious mental i
 category, beside the repeat-offender database's frequent violent and very frequent petty
 offenders.
 
+It is one of two harvesters for a single record set: the repeat-offender pipeline in
+[`../database/`](../database/) is the other. This folder finds, codes and groups incidents;
+validation, quarantine, the exports and the people list are the record set's
+([`../database/pipeline/records.py`](../database/pipeline/records.py)), shared with that
+pipeline. The person key and publication rule come from
+[`../database/pipeline/shared.py`](../database/pipeline/shared.py), loaded, not copied.
+
 It sits beside the repeat-offender database in [`../database/`](../database/) and follows
 its pipeline: discovery from Google News (and GDELT), headline triage, full-text classification
 by Claude Haiku with verbatim evidence quotes checked against the article, grouping, a
@@ -120,10 +127,11 @@ An incident qualifies (`qualifies_smi`) when all of these hold:
 The subject may have caused the harm or suffered it (`subject_role`); both count. The site
 does not label which.
 
-An incident also meets the **repeat-offender rules** (`repeat_offender_rules`) when it
-qualifies and, as that database requires, the subject was arrested, charged or convicted, was
-not killed by police, and the counts meet its strict threshold (5+ arrests, 5+ convictions or
-3+ felony convictions). Its card then shows under both categories.
+Serious mental illness is a **category of its own**. A qualifying incident is shown only as
+an SMI case, never also as a violent or petty offender, whatever the subject's record; when
+the repeat-offender database has the same incident, the SMI record is the one shown
+([`../database/pipeline/records.py`](../database/pipeline/records.py)). `qualifies_strict`
+still records whether the stated counts meet that database's threshold.
 
 **Publication** (as in the repeat-offender database): two or more distinct outlets, or a first
 source on that database's trusted list. Qualifying incidents with one outlet stay in the data
@@ -172,7 +180,7 @@ editorial and legal review before launch.
 | `subject_key` | `last_first_ST`, the same normalization as `offender_key`. |
 | `repeat_offender_ids` | Ids in `../database/` for the same person. |
 | Articles only | `published`, `headline`; `coded_by` (`phrasebook` or `claude`); `review_status` (`pending` = not looked at, `flagged`, `accepted`, `rejected`) and `reviewed_date`; `excluded_reason`; `incident_id`; `contribution` (`primary`, `corroboration`, `context`, `redundant`); `added_info`. |
-| Incidents only | `article_ids`, `article_count`, `redundant_article_ids`; `qualifies_smi`, `qualify_note`; `qualifies_strict` (the repeat-offender count threshold), `repeat_offender_rules`; `corroboration_checked`; `offender_category`, `category_reason` (set by `../database/pipeline/categorize.py`); `site_excluded` (set by hand: why the incident is kept off the site). |
+| Incidents only | `article_ids`, `article_count`, `redundant_article_ids`; `qualifies_smi`, `qualify_note`; `qualifies_strict` (the repeat-offender count threshold); `corroboration_checked`; `site_excluded` (why the incident is kept off the site: set by hand, or "quarantined DATE: reason" by `../database/pipeline/quarantine.py`). |
 
 ## Running
 
@@ -180,12 +188,13 @@ In GitHub Actions, with the repository's `ANTHROPIC_API_KEY` secret:
 
 - **Daily update** (`.github/workflows/daily.yml`, 6:30am ET): after the repeat-offender
   pipeline, `python pipeline/run.py daily` harvests the last day, cross-lists new
-  repeat-offender stories, codes, groups, and searches for second sources. The categorize step
-  and the export build that follow include these incidents. Data that fails
-  `run.py validate` is not committed.
+  repeat-offender stories, codes, groups, and searches for second sources. The record set is
+  then validated as a whole (`../database/pipeline/check_data.sh`): a failing SMI record is
+  quarantined (its `site_excluded` set), and if this folder's files are broken (the
+  `run.py validate` checks below), its changes that day are discarded, not committed.
 - **SMI backfill (manual)** (`.github/workflows/smi-backfill.yml`): harvests further 14-day
   windows backwards, codes everything still uncoded, groups, searches for second sources,
-  categorizes and rebuilds the exports.
+  validates the record set and rebuilds the exports.
 
 Locally:
 
@@ -196,7 +205,8 @@ python pipeline/run.py harvest --days 14 --next-back  # free without a key: phra
 python pipeline/run.py crosslist                      # free
 python pipeline/run.py incidents                      # without a key, groups by rule only
 python pipeline/run.py review                         # spot-check articles
-python pipeline/run.py validate
+python pipeline/run.py validate                       # this folder's files only
+python ../database/pipeline/validate_data.py          # the whole record set (from ../database)
 export ANTHROPIC_API_KEY=...
 python pipeline/run.py daily                          # what the daily job runs
 python pipeline/run.py backfill --windows 4           # what the backfill workflow runs

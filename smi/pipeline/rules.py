@@ -1,5 +1,4 @@
-"""The inclusion rule for the "Serious mental illness" category, and the test
-for listing an incident under the repeat-offender categories too.
+"""The inclusion rule for the "Serious mental illness" category.
 
 An incident qualifies (qualifies_smi = yes) when:
   - it happened in the United States (a US state is given);
@@ -18,11 +17,11 @@ The subject may have caused the harm or suffered it (subject_role); both
 count. Corroboration (two outlets or a trusted one) decides publication, not
 qualification: see corroborate.py.
 
-An incident also meets the repeat-offender rules (repeat_offender_rules =
-yes) when it qualifies and, as that database requires, the subject was
-arrested, charged or convicted, was not killed by police, and the counts
-meet its strict threshold. ../database/pipeline/categorize.py then gives it
-a violent or petty category, so its card shows under both.
+Serious mental illness is a category of its own in the one record set
+(../database/pipeline/records.py): a qualifying incident is never also
+violent or petty, whatever the subject's record. qualifies_strict records
+whether the stated counts meet the repeat-offender threshold, for the data,
+not for a second category.
 """
 
 import re
@@ -75,18 +74,9 @@ def strict(row: dict) -> bool:
                             _int(row.get("prior_count_felony_convictions")))
 
 
-def meets_repeat_offender_rules(row: dict) -> bool:
-    return (row.get("qualifies_smi") == "yes" and strict(row) and arrested(row)
-            and row.get("subject_role") == "subject_accused"
-            and row.get("killed_by_police") != "true")
-
-
 def apply_rules(row: dict) -> None:
     """Set the rule columns on an incident row, in place."""
     ok, note = qualifies_smi(row)
     row["qualifies_smi"] = "yes" if ok else "no"
     row["qualify_note"] = note
     row["qualifies_strict"] = "yes" if strict(row) else "no"
-    row["repeat_offender_rules"] = "yes" if meets_repeat_offender_rules(row) else "no"
-    if row["repeat_offender_rules"] != "yes":
-        row["offender_category"] = row["category_reason"] = ""

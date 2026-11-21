@@ -512,16 +512,15 @@ def test_removed_incident_ids_are_never_reused(monkeypatch):
     assert sorted(r["id"] for r in rows) == ["INC-000002", "INC-000003"]
 
 
-def test_rebuild_keeps_corroboration_and_category(monkeypatch):
+def test_rebuild_keeps_corroboration_and_site_exclusion(monkeypatch):
     monkeypatch.setattr(incidents, "link_repeat_offenders", lambda rows: 0)
     articles = [_coded(1, prior_count_arrests=12,
                        prior_evidence_quote="He has a criminal history spanning two decades.")]
     rows, _, _ = incidents.build_incidents(articles)
-    assert rows[0]["repeat_offender_rules"] == "yes"
-    rows[0].update(corroboration_checked="2026-10-27", offender_category="violent",
-                   category_reason="two assault convictions", site_excluded="court-only coverage")
+    assert rows[0]["qualifies_strict"] == "yes" and "offender_category" not in rows[0]
+    rows[0].update(corroboration_checked="2026-10-27", site_excluded="court-only coverage")
     rows, _, _ = incidents.build_incidents(articles, previous=rows)
-    assert rows[0]["corroboration_checked"] == "2026-10-27" and rows[0]["offender_category"] == "violent"
+    assert rows[0]["corroboration_checked"] == "2026-10-27"
     assert rows[0]["site_excluded"] == "court-only coverage"   # set by hand, kept by every rebuild
 
 
@@ -610,27 +609,6 @@ QUALIFYING = {"state": "MA", "age": "46", "subject_role": "subject_accused", "ou
 def test_inclusion_rule(change, ok, note):
     got, why = rules.qualifies_smi({**QUALIFYING, **change})
     assert got is ok and note in why
-
-
-@pytest.mark.parametrize("change,meets", [
-    ({}, True),
-    ({"prior_count_arrests": "4"}, False),                     # under the strict threshold
-    ({"prior_count_arrests": "", "prior_count_felony_convictions": "3"}, True),
-    ({"killed_by_police": "true"}, False),
-    ({"subject_role": "subject_victim"}, False),
-    ({"outcome": "hospitalized", "violence": "true"}, False),  # qualifies here, but no arrest
-    ({"state": ""}, False),                                     # not a qualifying incident
-])
-def test_repeat_offender_rules(change, meets):
-    row = {**QUALIFYING, "prior_count_arrests": "12", "prior_evidence_quote": "q", **change}
-    rules.apply_rules(row)
-    assert (row["repeat_offender_rules"] == "yes") is meets
-
-
-def test_category_is_cleared_outside_the_repeat_offender_rules():
-    row = {**QUALIFYING, "offender_category": "violent", "category_reason": "r"}
-    rules.apply_rules(row)
-    assert row["repeat_offender_rules"] == "no" and row["offender_category"] == ""
 
 
 def test_codebook_rule_sets():

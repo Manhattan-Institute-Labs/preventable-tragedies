@@ -18,7 +18,7 @@ from config import (ARTICLES_CSV, CONTRIBUTIONS, DATA_DIR, INCIDENT_FORMS, INCID
                     RELEASE_STATUSES, REMOVED_INCIDENTS_CSV, REVIEW_STATUSES, SIGNAL_FIELDS,
                     SUBJECT_ROLES)
 from dedupe import _split_evidence
-from rules import meets_repeat_offender_rules, qualifies_smi, strict
+from rules import qualifies_smi, strict
 
 MARKERS = ("<<<<<<<", "=======", ">>>>>>>")
 
@@ -54,10 +54,6 @@ def incident_problems(r: dict) -> list[str]:
         out.append(f"qualifies_smi {r.get('qualifies_smi')!r} disagrees with the rule")
     if (r.get("qualifies_strict") == "yes") != strict(r):
         out.append(f"qualifies_strict {r.get('qualifies_strict')!r} disagrees with the counts")
-    if (r.get("repeat_offender_rules") == "yes") != meets_repeat_offender_rules(r):
-        out.append("repeat_offender_rules disagrees with the rule")
-    if r.get("offender_category") and r.get("repeat_offender_rules") != "yes":
-        out.append("offender_category set on an incident outside the repeat-offender rules")
     return out
 
 

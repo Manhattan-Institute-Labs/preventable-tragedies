@@ -68,8 +68,9 @@ jobs:
       # The serious-mental-illness tracker (smi/): the last day of news,
       # repeat-offender stories with mental-health language, Claude coding,
       # incidents, second-source search. Its requirements match database/'s.
-      # Before categorizing, so its incidents that meet this database's
-      # rules are categorized in the same run.
+      # Its incidents are records in the "smi" category only (records.py), so
+      # categorize.py below does not touch them. A separate step, so a failure
+      # in one harvester never stops the other.
       - name: Serious-mental-illness tracker
         if: always()
         working-directory: smi
@@ -107,8 +108,7 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git checkout -- exports || true
           git pull --rebase --autostash origin main
-          python pipeline/validate_data.py || { python pipeline/quarantine.py && python pipeline/validate_data.py; }
-          python ../smi/pipeline/run.py validate || { echo "SMI data failed validation: not committed"; git checkout -- ../smi/data; git clean -fdq ../smi/data; }
+          bash pipeline/check_data.sh   # validate both harvesters' data; quarantine or discard
           python pipeline/build_exports.py
           python pipeline/pack_decisions.py
           git add data exports ../smi/data
