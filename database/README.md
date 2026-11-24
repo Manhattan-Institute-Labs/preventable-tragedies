@@ -208,8 +208,8 @@ Everything in `pipeline/` is run by a workflow or imported by a script that is, 
 | `corroborate.py` | Daily update, Second-source search | searches for a second outlet |
 | `enforce_sources.py` | Daily update, Second-source search | moves rows still single-sourced to `removed.csv` |
 | `categorize.py` | Daily update, Categorize, Backfill, SMI backfill | violent / petty / unclassified |
-| `validate_data.py`, `quarantine.py` | every data workflow except SMI backfill | checks the CSVs; a failing row goes to `quarantine.csv` instead of failing the run |
-| `build_exports.py` | every workflow that commits data, Rebuild exports | `offenders.csv` and `exports/`, merging in the SMI incidents |
+| `validate_data.py`, `quarantine.py` | the data workflows, before they commit | checks the data; a failing row is quarantined instead of failing the run |
+| `build_exports.py` | every workflow that commits data, Rebuild exports | `offenders.csv` and `exports/`, the site's data, SMI incidents included |
 | `pack_decisions.py` | Daily update, Backfill, Categorize | gzips the decision logs, deletes daily ones older than 30 days |
 | `backfill.py`, `progress.py` | Backfill | the week-by-week historical search; `progress.py` pushes partial results |
 | `review_feedback.py` | Feedback triage (on new issues) | first review of a feedback issue |
