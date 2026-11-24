@@ -544,9 +544,51 @@ def test_google_news_search_adds_date_operators(monkeypatch):
     monkeypatch.setattr(fetch.feedparser, "parse",
                         lambda url: (seen_urls.append(url), type("F", (), {"entries": []})())[1])
     fetch.google_news_search('"repeat offender" arrested', datetime(2025, 1, 1), datetime(2025, 1, 7))
-    assert "after%3A2025-01-01" in seen_urls[0] and "before%3A2025-01-07" in seen_urls[0]
+    # Both dates included: Google's before: is exclusive, so it gets the next day.
+    assert "after%3A2025-01-01" in seen_urls[0] and "before%3A2025-01-08" in seen_urls[0]
     fetch.google_news_search('"repeat offender" arrested')
     assert "after" not in seen_urls[1]
+
+
+def test_backfill_weeks_leave_no_day_unsearched(monkeypatch):
+    """Each week's before: (exclusive) is the next week's after: (inclusive).
+    Before the fix, before: was the week's own last day, which was skipped."""
+    import re
+    import fetch
+    from backfill import week_range
+    from datetime import datetime
+    urls = []
+    monkeypatch.setattr(fetch.feedparser, "parse",
+                        lambda url: (urls.append(url), type("F", (), {"entries": []})())[1])
+    monkeypatch.setattr(fetch.time, "sleep", lambda s: None)
+    monkeypatch.setattr(fetch, "GOOGLE_NEWS_QUERIES", ['"prior arrests" charged'])
+    for w_start, w_end in week_range(datetime(2025, 1, 1), datetime(2025, 1, 21, 23, 59, 59)):
+        fetch.discover_window(w_start, w_end)
+    windows = [re.search(r"after%3A([\d-]+).*before%3A([\d-]+)", u).groups() for u in urls]
+    assert windows == [("2025-01-01", "2025-01-08"), ("2025-01-08", "2025-01-15"),
+                       ("2025-01-15", "2025-01-22")]
+
+
+def test_discover_daily_limits_google_news_to_the_window(monkeypatch):
+    """Undated searches return months-old matches in no date order and miss
+    most new stories, so the daily search carries the window's dates, through
+    today (before: is exclusive). Stats keep the undated query."""
+    import fetch
+    from datetime import datetime, timedelta, timezone
+    seen_urls = []
+    entry = {"link": "https://example.com/news/story", "title": "Man with 6 prior arrests charged",
+             "source": {"title": "Example News"}, "summary": ""}
+    monkeypatch.setattr(fetch.feedparser, "parse",
+                        lambda url: (seen_urls.append(url), type("F", (), {"entries": [entry]})())[1])
+    monkeypatch.setattr(fetch.time, "sleep", lambda s: None)
+    monkeypatch.setattr(fetch, "GOOGLE_NEWS_QUERIES", ['"prior arrests" charged'])
+    monkeypatch.setattr(fetch, "QUERY_HITS", {})
+    found = fetch.discover_daily(days_back=2, use_gdelt=False)
+    today = datetime.now(timezone.utc).date()
+    assert f"after%3A{today - timedelta(days=2)}" in seen_urls[0]
+    assert f"before%3A{today + timedelta(days=1)}" in seen_urls[0]
+    assert found[0]["query"] == '"prior arrests" charged'
+    assert fetch.QUERY_HITS == {'"prior arrests" charged': {"gdelt": 0, "gdelt_capped": False, "gnews": 1}}
 
 
 def test_process_cap_ranks_before_resolution(monkeypatch, tmp_path):

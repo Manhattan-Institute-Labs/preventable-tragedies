@@ -25,7 +25,11 @@ directory.
    OR-grouped queries (splitting the window when one hits GDELT's 250-record cap) and from
    Google News RSS with ~30 narrow queries such as `"repeat offender" arrested` and
    `"out on bond" arrested` ([pipeline/fetch.py](pipeline/fetch.py),
-   [pipeline/config.py](pipeline/config.py)).
+   [pipeline/config.py](pipeline/config.py)). Every Google News query carries `after:`/`before:`
+   date limits for the last two days (`DAYS_BACK`), so each day is searched by two runs.
+   Until late November 2026 the daily queries had no date limit, and Google returned up to 100
+   matches from the past several months in no date order: most of each day's new stories
+   never appeared, and ~95% of what came back had already been seen.
 2. **Triage.** Headlines are screened in batches of 25 by Claude Haiku before any article is
    fetched or any Google News redirect is decoded. Policy pieces, blotters, and non-US stories
    are dropped here; anything plausible is kept ([pipeline/triage.py](pipeline/triage.py)).
@@ -188,6 +192,13 @@ is capped at `--max-per-week` articles, best headlines first. It writes only to
 `data/backfill/`, records completed weeks and resumes on rerun, and with `--push-progress`
 commits that directory after every week. The "Backfill (manual)" workflow runs it on Actions
 in 300-minute slices; rerun the same range until it reports no weeks left.
+
+Until late November 2026 each week's search left out the week's last day: Google's `before:`
+is exclusive, and it was given that day. Every week recorded in `data/backfill/done_weeks.json`
+before then was searched that way (2025-01 through 2026-09). To search those weeks again,
+remove them from that file and rerun the range. Articles already processed are skipped
+without a Claude call; what goes to Claude is the missing days plus any articles an earlier
+run left over its `--max-per-week` cap, which are never marked seen.
 
 ## What came over and what didn't
 

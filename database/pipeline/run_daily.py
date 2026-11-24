@@ -22,7 +22,7 @@ def main() -> None:
     backfill_rows = load_stories(BACKFILL_STORIES_CSV)   # deduped against, merged into, never appended to
 
     print("Discovering candidates...")
-    candidates = discover_daily(days_back=int(os.environ.get("DAYS_BACK", "1")))
+    candidates = discover_daily(days_back=int(os.environ.get("DAYS_BACK", "2")))
     save_query_stats()
     print(f"Found {len(candidates)} candidate URLs "
           f"({sum(1 for c in candidates if c['url'] in seen)} already seen)\n")
