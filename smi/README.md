@@ -22,7 +22,9 @@ Paths below are relative to `smi/`.
 
 - **`data/articles.csv`**: one row per article. Claude codes every harvested article.
   Review is a spot-check, not a gate: a reviewer's **Reject** keeps an article out of
-  incidents; nothing else needs a person.
+  incidents; nothing else needs a person (**Flag** holds nothing back). An article the phrase
+  book coded but Claude could not re-read (no text) stays `coded_by` `phrasebook` and is
+  retried every run.
 - **`data/incidents.csv`**: one row per incident, built from the coded articles, with the
   inclusion rule applied (`qualifies_smi`, and `qualify_note` saying why). Every incident is
   kept, qualifying or not, so the counts (including incidents where the subject was the one
@@ -33,6 +35,17 @@ Paths below are relative to `smi/`.
 - **`data/removed_incidents.csv`**: incidents that lost all their articles, with the date and
   reason. Their ids are never reused. Nothing is deleted: rejected and excluded articles stay
   in `articles.csv`.
+- **`data/harvest_windows.json`**: every date window harvested and how many articles it added.
+  A window that found nothing is still recorded (2026-11-01 to 11-02, when Google News
+  returned no results), and the backfill only moves further back in time, so such a window is
+  searched again only by hand: `run.py harvest --days 1 --end YYYY-MM-DD`.
+- `data/seen_urls.json`, `data/crosslist_checked.json`, `data/query_stats.json`: URLs already
+  decided, repeat-offender stories already cross-listed, and results per query per day.
+- **`reference/`**: from the Known to the System project, kept as reference; no pipeline step
+  reads either file. `reference_incidents.csv` is the 274 coded incidents the phrase book was
+  built on (a test checks it is present). `trigger_phrase_vocabulary.tsv` is the phrases that
+  triggered a signal across those incidents, with counts: the seed vocabulary for the search
+  queries, useful when changing them.
 
 ## How it works
 
@@ -178,7 +191,7 @@ editorial and legal review before launch.
 
 In GitHub Actions, with the repository's `ANTHROPIC_API_KEY` secret:
 
-- **Daily update** (`.github/workflows/daily.yml`, 6:30am ET): after the repeat-offender
+- **Daily update** (`.github/workflows/daily.yml`, 10:30 UTC, from `main`): after the repeat-offender
   pipeline, `python pipeline/run.py daily` harvests the last day, cross-lists new
   repeat-offender stories, codes, groups, and searches for second sources. The categorize step
   and the export build that follow include these incidents. Data that fails

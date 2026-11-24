@@ -941,28 +941,6 @@ def test_process_dedupes_against_other_file(monkeypatch, tmp_path):
     assert other["additional_sources"] == "https://x.com/a"
 
 
-def test_merge_duplicates_rule_and_merge():
-    import merge_duplicates as md
-    a = make_row(74, _cls(), {"url": "https://wxyz.com/a", "source": "WXYZ"}); a["date_added"] = "2026-09-05"
-    b = make_row(1002191, _cls(prior_count_arrests=13, age=None, incident_date="2026-09-03"),
-                 {"url": "https://nbc4i.com/b", "source": "NBC4"}); b["date_added"] = "2026-09-07"
-    b["mugshot_url"] = "https://nbc4i.com/m.jpg"
-    c = make_row(3, _cls(incident_date="2026-01-10", new_offense_type="arson", city="Dayton"),
-                 {"url": "https://wxyz.com/c", "source": "WXYZ"}); c["date_added"] = "2026-09-05"
-    d = make_row(4, _cls(incident_date="2026-09-05", new_offense_type="arson", city="Dayton"),
-                 {"url": "https://wxyz.com/d", "source": "WXYZ"}); d["date_added"] = "2026-09-09"
-    assert md.same_incident(a, b)              # same key, 2 days apart, same city
-    assert not md.same_incident(a, c)          # 8 months apart
-    assert not md.same_incident(a, d)          # close in time, but different city and offense
-    assert md._dates_close("2026-01", "2026-08-08") is False and md._dates_close("2026-09", "2026-09-20") is True
-    merges = md.find_merges([b, a, c, d])
-    assert [(k["id"], o["id"]) for k, o in merges] == [("74", "1002191")]   # published first wins
-    md.merge_into(a, b)
-    assert a["additional_sources"] == "https://nbc4i.com/b"
-    assert a["prior_count_arrests"] == "13" and a["mugshot_url"] == "https://nbc4i.com/m.jpg"
-    assert a["corroboration_checked"] == ""
-
-
 def test_resolve_candidate_accepts_both_decoder_result_shapes(monkeypatch):
     import fetch
     shapes = [

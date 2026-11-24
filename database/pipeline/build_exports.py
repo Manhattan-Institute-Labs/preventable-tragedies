@@ -112,11 +112,6 @@ def merge_smi(stories: list[dict], incidents: list[dict]) -> list[dict]:
     return own
 
 
-def _max_int(values) -> str:
-    ints = [int(v) for v in values if v]
-    return str(max(ints)) if ints else ""
-
-
 def build_offenders(stories: list[dict]) -> list[dict]:
     groups: dict[str, list[dict]] = defaultdict(list)
     for s in stories:

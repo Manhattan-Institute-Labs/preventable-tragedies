@@ -4,5 +4,3 @@ __pycache__/
 .DS_Store
 .pytest_cache/
 data/decisions/*.jsonl
-data/imports/
-drafts/
