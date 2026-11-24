@@ -10,6 +10,7 @@ published on the site as the "Serious mental illness" category, by
 """
 
 import importlib.util
+import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent  # the smi/ folder
@@ -48,18 +49,23 @@ REPEAT_OFFENDER_STORIES = [
 ]
 
 
-def _repeat_offender_config():
-    """That database's config module, loaded under its own name: both folders
-    have a config.py, and its rules (outcome wording, strict threshold,
-    trusted outlets, vocabularies) must be read from one place, not copied."""
-    spec = importlib.util.spec_from_file_location(
-        "repeat_offender_config", REPEAT_OFFENDER_DIR / "pipeline" / "config.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+def repeat_offender_module(name: str):
+    """A module from ../database/pipeline, loaded once under its own name:
+    both folders have a config.py (and a store.py, and more), and the rules
+    the two harvesters share must be read from one place, not copied. Its
+    config gives the outcome wording, strict threshold, trusted outlets and
+    vocabularies; its shared.py the person key and the publication rule."""
+    key = f"repeat_offender_{name}"
+    if key not in sys.modules:
+        spec = importlib.util.spec_from_file_location(
+            key, REPEAT_OFFENDER_DIR / "pipeline" / f"{name}.py")
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[key] = module
+        spec.loader.exec_module(module)
+    return sys.modules[key]
 
 
-_RO = _repeat_offender_config()
+_RO = repeat_offender_module("config")
 STORED_OUTCOME_RE = _RO.STORED_OUTCOME_RE        # arrested, charged, convicted...
 STRICT_MIN_ARRESTS = _RO.STRICT_MIN_ARRESTS
 STRICT_MIN_CONVICTIONS = _RO.STRICT_MIN_CONVICTIONS
@@ -353,11 +359,9 @@ INCIDENT_COLUMNS = [
     "confidence", "repeat_offender_ids",
     # The inclusion rule (rules.py), and why.
     "qualifies_smi", "qualify_note",
-    # The repeat-offender strict threshold on the counts, and whether the
-    # incident meets that database's rules as a whole (reverse cross-listing).
-    "qualifies_strict", "repeat_offender_rules",
+    # Whether the stated counts meet the repeat-offender strict threshold.
+    "qualifies_strict",
     "corroboration_checked",   # date the second-source search last ran
-    "offender_category", "category_reason",   # set by ../database categorize.py
     "site_excluded",   # set by hand: why the incident stays in this file but off the site
 ]
 

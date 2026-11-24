@@ -25,14 +25,13 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from typing import Optional
-from urllib.parse import urlsplit
-
 import anthropic
 from pydantic import BaseModel, ValidationError
 
-from config import BACKFILL_STORIES_CSV, DEDUPE_MODEL, STORIES_CSV, TRUSTED_OUTLETS
+from config import BACKFILL_STORIES_CSV, DEDUPE_MODEL, STORIES_CSV
 from fetch import fetch_article_text, google_news_search, is_vendor_or_wire, resolve_candidate
 from process import DecisionLog, canonical_url, default_decision_log, syndication_path
+from shared import host as _host, is_trusted, outlets, publishable  # noqa: F401 (publishable re-exported)
 from store import load_stories, save_stories
 
 MAX_CANDIDATES = 4      # outlets tried per row
@@ -46,25 +45,6 @@ class Match(BaseModel):
     same_person: bool
     same_incident: bool
     reason: str
-
-
-def _host(url: str) -> str:
-    return urlsplit(url).netloc.lower().removeprefix("www.")
-
-
-def outlets(row: dict) -> set[str]:
-    return {_host(u) for u in [row.get("source_url", "")] + (row.get("additional_sources") or "").split() if u}
-
-
-def is_trusted(url: str) -> bool:
-    """Primary source is an outlet on the trusted list (or a subdomain of one)."""
-    host = _host(url)
-    return any(host == d or host.endswith("." + d) for d in TRUSTED_OUTLETS)
-
-
-def publishable(row: dict) -> bool:
-    """Two or more distinct outlets, or a trusted primary source."""
-    return is_trusted(row.get("source_url", "")) or len(outlets(row)) >= 2
 
 
 def pending(row: dict) -> bool:

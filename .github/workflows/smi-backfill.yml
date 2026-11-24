@@ -4,8 +4,9 @@ name: SMI backfill (manual)
 # `windows` windows of `days` days before the earliest one already done,
 # codes everything still uncoded (the first run also codes the articles
 # reviewed by hand before Claude was available), builds incidents and
-# searches for second sources. Then categorizes incidents that meet the
-# repeat-offender rules and rebuilds the exports.
+# searches for second sources. Then validates the record set and rebuilds
+# the exports. Serious mental illness is its own category, so nothing here
+# is categorized as violent or petty.
 
 on:
   workflow_dispatch:
@@ -50,14 +51,6 @@ jobs:
           python pipeline/run.py backfill --windows "${{ inputs.windows || '4' }}"
           --days "${{ inputs.days || '14' }}" --max-minutes 220 --corroborate-minutes 60
 
-      - name: Categorize incidents that meet the repeat-offender rules
-        if: always()
-        working-directory: database
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          PYTHONUNBUFFERED: "1"
-        run: python pipeline/categorize.py --smi-only --max-minutes 20
-
       - name: Upload decision log
         if: always()
         uses: actions/upload-artifact@v4
@@ -75,8 +68,8 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git checkout -- exports || true
           git pull --rebase --autostash origin main
-          python ../smi/pipeline/run.py validate || { echo "SMI data failed validation: not committed"; git checkout -- ../smi/data; git clean -fdq ../smi/data; }
+          bash pipeline/check_data.sh   # validate both harvesters' data; quarantine or discard
           python pipeline/build_exports.py
-          git add exports data/offenders.csv ../smi/data
+          git add data exports ../smi/data
           git diff --cached --quiet || git commit -m "SMI backfill: ${{ inputs.windows || '4' }} windows"
           git push

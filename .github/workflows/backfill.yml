@@ -87,9 +87,9 @@ jobs:
         run: |
           git checkout -- exports || true
           git pull --rebase --autostash origin main
-          python pipeline/validate_data.py || { python pipeline/quarantine.py && python pipeline/validate_data.py; }
+          bash pipeline/check_data.sh   # validate both harvesters' data; quarantine or discard
           python pipeline/build_exports.py
           python pipeline/pack_decisions.py
-          git add data exports
+          git add data exports ../smi/data
           git diff --cached --quiet || git commit -m "Backfill ${{ inputs.start }}..${{ inputs.end }}"
           git push
