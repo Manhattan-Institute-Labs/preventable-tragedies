@@ -201,11 +201,20 @@ def google_news_search(query: str, start: datetime | None = None,
                        end: datetime | None = None) -> list[dict]:
     """Google News RSS search. With start/end, the query carries Google's
     after:/before: date operators, which is what makes a backfill possible
-    without GDELT. Up to 100 results per query."""
+    without GDELT. Up to 100 results per query.
+
+    Both dates are included. Google's before: is exclusive, so it gets the
+    day after `end`. (Until 2026-11 it got `end` itself, so every backfill
+    week, whose end is its last day, skipped that day.)
+
+    Hits and each candidate's "query" are recorded under the query without
+    the dates, so query_stats.json and the decision log stay comparable from
+    day to day."""
+    q = query
     if start and end:
-        query = f"{query} after:{start:%Y-%m-%d} before:{end:%Y-%m-%d}"
+        q = f"{query} after:{start:%Y-%m-%d} before:{end + timedelta(days=1):%Y-%m-%d}"
     feed_url = ("https://news.google.com/rss/search?q="
-                f"{quote(query)}&hl=en-US&gl=US&ceid=US:en")
+                f"{quote(q)}&hl=en-US&gl=US&ceid=US:en")
     feed = feedparser.parse(feed_url)
     out = []
     for entry in feed.entries:
@@ -243,6 +252,15 @@ def discover_window(start: datetime, end: datetime, sleep: float = 1.0) -> list[
 def discover_daily(days_back: int = 1, use_gdelt: bool | None = None) -> list[dict]:
     """All candidates from the last `days_back` days, deduped by URL.
 
+    Google News queries carry after:/before: date operators for the window,
+    through today. Without them Google returns up to 100 matches from the
+    past several months, not newest first: on 2026-11-24 the undated
+    searches left out 11 of 16 and 7 of 7 of two queries' last-day stories,
+    and ~95% of what a run got back had already been seen. Google applies
+    the dates in US time, so the window runs through today's date. The daily
+    job searches two days, so every day is covered by two runs and one
+    failed run loses nothing.
+
     GDELT is off by default on the daily run: from GitHub Actions' shared
     egress IPs it 429s nearly every query and returned 47 of ~2,600
     candidates across three live runs. Set USE_GDELT=1 to enable it (it
@@ -260,7 +278,7 @@ def discover_daily(days_back: int = 1, use_gdelt: bool | None = None) -> list[di
         print(f"  GDELT {len(found):4} | {q[:80]}")
         time.sleep(GDELT_SLEEP)
     for q in GOOGLE_NEWS_QUERIES:
-        found = google_news_search(q)
+        found = google_news_search(q, start, end)
         for c in found:
             candidates.setdefault(c["url"], c)
         time.sleep(1)

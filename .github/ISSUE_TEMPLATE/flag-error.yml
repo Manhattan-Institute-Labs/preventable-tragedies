@@ -7,7 +7,7 @@ body:
     id: record-id
     attributes:
       label: Record ID
-      description: The id of the record (visible in the CSV download), or describe the row.
+      description: The record's id (the id column in database/exports/stories.csv), or describe the record.
       placeholder: "e.g. 412, or '2026-07-11 Springfield OH robbery'"
     validations:
       required: true
@@ -16,8 +16,8 @@ body:
     attributes:
       label: What's wrong?
       options:
-        - Shouldn't be included (no concrete prior record or release status)
-        - Factual error (wrong date, location, offense, counts, or release status)
+        - Shouldn't be included (doesn't meet the inclusion rules)
+        - Factual error (wrong date, location, offense, counts, release status, or mental-health details)
         - Duplicate of another record
         - Same person as another record but not linked
         - Source link is dead or doesn't support the claim

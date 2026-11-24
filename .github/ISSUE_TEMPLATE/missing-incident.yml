@@ -1,5 +1,5 @@
 name: Submit a missing story
-description: A news story about a repeat offender that the database does not have.
+description: A news story about a repeat offender, or a person with serious mental illness, that the database does not have.
 title: "[Missing story] "
 labels: ["feedback", "missing-incident"]
 body:
@@ -13,4 +13,4 @@ body:
     id: notes
     attributes:
       label: Notes (optional)
-      description: Anything the article says about the prior record or release status.
+      description: Anything the article says about the prior record, release status, or mental-health history.

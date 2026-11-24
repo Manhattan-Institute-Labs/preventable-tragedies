@@ -6,8 +6,10 @@ on:
   workflow_dispatch:
     inputs:
       days_back:
-        description: "Days of news to search (default 1)"
-        default: "1"
+        # Two days: every day is searched by two runs, so one failed run
+        # loses nothing. Already-seen articles are skipped for free.
+        description: "Days of news to search (default 2)"
+        default: "2"
       max_classify:
         description: "Cap on articles fetched and classified this run (0 = no cap)"
         default: "150"
@@ -42,7 +44,7 @@ jobs:
       - name: Run daily pipeline
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          DAYS_BACK: ${{ inputs.days_back || '1' }}
+          DAYS_BACK: ${{ inputs.days_back || '2' }}
           MAX_CLASSIFY: ${{ inputs.max_classify || '150' }}
           PYTHONUNBUFFERED: "1"
         run: python pipeline/run_daily.py
