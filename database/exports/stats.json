@@ -1,14 +1,14 @@
 {
- "updated": "2026-11-24",
- "stories": 584,
+ "updated": "2026-11-25",
+ "stories": 585,
  "stories_strict": 466,
  "by_category": {
   "violent": 160,
-  "smi": 148,
+  "smi": 149,
   "unclassified": 141,
   "petty": 135
  },
- "offenders": 549,
+ "offenders": 550,
  "offenders_multiple_incidents": 10,
  "by_state": {
   "NY": 132,
@@ -50,9 +50,9 @@
   "AL": 2,
   "WI": 2,
   "RI": 2,
+  "NJ": 2,
   "WV": 1,
   "AK": 1,
-  "NJ": 1,
   "DE": 1,
   "ID": 1,
   "GU": 1,
@@ -110,7 +110,7 @@
   "NM": 1
  },
  "by_release_status": {
-  "none stated": 328,
+  "none stated": 329,
   "parole": 71,
   "bail/bond": 65,
   "probation": 41,
@@ -120,7 +120,7 @@
   "charges dropped": 2
  },
  "by_offense_type": {
-  "homicide": 131,
+  "homicide": 132,
   "assault": 103,
   "drug offense": 48,
   "shooting": 43,
@@ -140,7 +140,7 @@
   "carjacking": 2
  },
  "by_severity": {
-  "violent": 384,
+  "violent": 385,
   "property": 73,
   "drug": 48,
   "other": 43,
@@ -233,6 +233,6 @@
   "2026-08": 31,
   "2026-09": 34,
   "2026-10": 33,
-  "2026-11": 10
+  "2026-11": 11
  }
 }
