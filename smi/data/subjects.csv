@@ -42,7 +42,7 @@ chadli_kamilia_WA,Kamilia Chadli,WA,INC-000087,1,1,2026-09-18,2026-09-18,,,,prio
 chapman_william_,William Chapman,,INC-000121,1,0,2026-10-11,2026-10-11,,,,prior_police_contact psych_medication mh_history diagnosis_named,schizophrenia,
 chung_pei_NY,Pei Chung,NY,INC-000167,1,1,2025-11-15,2025-11-15,,,,police_brought_for_eval,,1001969
 cisneros_pamela_NY,Pamela Cisneros,NY,INC-000003,1,1,2026-08-31,2026-08-31,,,,prior_hospital_discharge prior_police_contact prior_arrests edp_call crisis_call medication_lapse psych_medication mh_history diagnosis_named,postpartum depression; bipolar disorder,
-clancy_lindsay_MA,Lindsay Clancy,MA,INC-000011,1,1,2023-01-24,2023-01-24,,,,prior_hospital_discharge family_sought_help psych_medication mh_history,postpartum psychosis,
+clancy_lindsay_MA,Lindsay Clancy,MA,INC-000011,1,1,2023-01-24,2023-01-24,,,,prior_hospital_discharge crisis_call family_sought_help psych_medication mh_history,postpartum psychosis; major depressive disorder,
 colburn_stone_VA,Stone Lee Colburn,VA,INC-000046,1,0,2021-07-04,2021-07-04,,,,competency,,
 cole_ryan_FL,Ryan Cole,FL,INC-000146,1,1,2019,2019,,,,diagnosis_named,psychotic disorder,783
 collier_christian_FL,Christian Morgan Collier,FL,INC-000200,1,1,2026-11-03,2026-11-03,1,1,,prior_custody_release prior_arrests,,
@@ -108,7 +108,7 @@ jeddou_khaled_UT,Khaled Saleh Jeddou,UT,INC-000222,1,1,2026-11-15,2026-11-15,64,
 jones_amy_WI,Amy Jones,WI,INC-000108,1,1,2026-09-24,2026-09-24,0,,,prior_hospital_discharge prior_arrests medication_lapse psych_medication mh_history diagnosis_named,bipolar disorder,
 jones_sean_NY,Sean Jones,NY,INC-000172,1,1,2026-01-06,2026-01-06,24,,,police_brought_for_eval prior_arrests competency,,77
 king_demonte_MN,Demonte Tyvell King,MN,INC-000068,1,1,2024-12-18,2024-12-18,,,,prior_hospital_discharge competency medication_lapse psych_medication homeless diagnosis_named,schizophrenia,
-knipe_john_NJ,John P. Knipe Jr.,NJ,INC-000230,1,1,2026-11-12,2026-11-12,,,,prior_hospital_discharge prior_police_contact prior_arrests edp_call crisis_call medication_lapse psych_medication mh_history,,
+knipe_john_NJ,John P. Knipe Jr.,NJ,INC-000230,1,1,2026-11-12,2026-11-12,,,,prior_hospital_discharge prior_police_contact prior_arrests edp_call crisis_call medication_lapse psych_medication treatment_refusal mh_history,,
 labidi_aymen_TX,Aymen Labidi,TX,INC-000155,1,1,2025-04-08,2025-04-08,,,,prior_custody_release prior_arrests competency,,1000587
 lamb_daniel_AZ,Daniel Lamb,AZ,INC-000067,1,1,2026-09-22,2026-09-22,,,,prior_arrests family_sought_help mh_history,,
 lavie_adva_CA,Adva Lavie,CA,INC-000180,1,0,2026-07-28,2026-07-28,,,,competency mh_history,post-traumatic stress disorder,1003454
