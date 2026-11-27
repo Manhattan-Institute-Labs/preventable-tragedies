@@ -1,10 +1,10 @@
 {
- "updated": "2026-11-26",
- "stories": 585,
+ "updated": "2026-11-27",
+ "stories": 586,
  "stories_strict": 466,
  "by_category": {
   "violent": 160,
-  "smi": 149,
+  "smi": 150,
   "unclassified": 141,
   "petty": 135
  },
@@ -49,10 +49,10 @@
   "KY": 3,
   "AL": 2,
   "WI": 2,
+  "AK": 2,
   "RI": 2,
   "NJ": 2,
   "WV": 1,
-  "AK": 1,
   "DE": 1,
   "ID": 1,
   "GU": 1,
@@ -110,7 +110,7 @@
   "NM": 1
  },
  "by_release_status": {
-  "none stated": 329,
+  "none stated": 330,
   "parole": 71,
   "bail/bond": 65,
   "probation": 41,
@@ -233,6 +233,6 @@
   "2026-08": 31,
   "2026-09": 34,
   "2026-10": 33,
-  "2026-11": 11
+  "2026-11": 12
  }
 }
