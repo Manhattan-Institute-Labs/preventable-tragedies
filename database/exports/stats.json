@@ -1,18 +1,18 @@
 {
- "updated": "2026-11-27",
- "stories": 586,
- "stories_strict": 466,
+ "updated": "2026-11-28",
+ "stories": 587,
+ "stories_strict": 467,
  "by_category": {
   "violent": 160,
   "smi": 150,
-  "unclassified": 141,
+  "unclassified": 142,
   "petty": 135
  },
- "offenders": 550,
+ "offenders": 551,
  "offenders_multiple_incidents": 10,
  "by_state": {
   "NY": 132,
-  "FL": 64,
+  "FL": 65,
   "CA": 41,
   "TX": 26,
   "MI": 25,
@@ -62,7 +62,7 @@
  },
  "by_state_strict": {
   "NY": 116,
-  "FL": 49,
+  "FL": 50,
   "CA": 31,
   "TX": 23,
   "MI": 20,
@@ -110,7 +110,7 @@
   "NM": 1
  },
  "by_release_status": {
-  "none stated": 330,
+  "none stated": 331,
   "parole": 71,
   "bail/bond": 65,
   "probation": 41,
@@ -125,7 +125,7 @@
   "drug offense": 48,
   "shooting": 43,
   "sexual assault": 42,
-  "other": 39,
+  "other": 40,
   "burglary": 27,
   "theft/larceny": 25,
   "weapons offense": 22,
@@ -143,7 +143,7 @@
   "violent": 385,
   "property": 73,
   "drug": 48,
-  "other": 43,
+  "other": 44,
   "weapons": 22
  },
  "by_month": {
@@ -233,6 +233,6 @@
   "2026-08": 31,
   "2026-09": 34,
   "2026-10": 33,
-  "2026-11": 12
+  "2026-11": 13
  }
 }
